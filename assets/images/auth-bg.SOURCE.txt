@@ -1,0 +1,4 @@
+auth-bg.jpg: background of the sign-in screen.
+Photo: "Wing with morning sunrise sky.jpg" by Michael, Wikimedia Commons, public domain.
+https://commons.wikimedia.org/wiki/File:Wing_with_morning_sunrise_sky.jpg
+Cropped to portrait (1100x2252) and recompressed; no other changes.

@@ -25,16 +25,6 @@ In the output, you'll find options to open the app in a
 
 You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
-
 ### Other setup steps
 
 - To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
@@ -54,3 +44,14 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+## Thử tìm chuyến bằng AI
+
+Trong `.env.local`, cấu hình địa chỉ API SkyGo như trong `.env.example`, đặt
+`EXPO_PUBLIC_ENABLE_FLIGHT_AI=true` và thêm `GEMINI_API_KEY` từ Google AI Studio.
+Khởi động lại bằng `npx expo start`, mở Tìm chuyến bay và thử
+“Sài Gòn đi Đà Nẵng ngày mai, 2 người, bay sau 18h”.
+
+Expo dev server gọi Gemini từ API route nội bộ. Chỉ dùng câu tìm chuyến thử nghiệm,
+không nhập thông tin hành khách hoặc mã đặt chỗ. Bản demo giới hạn 5 yêu cầu mỗi
+phút trên dev server và được tắt trong bản phát hành.

@@ -9,11 +9,29 @@ import { Platform } from 'react-native';
 
 export const Colors = {
   light: {
-    text: '#000000',
+    text: '#1C2230',
     background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    backgroundElement: '#F4F5F8',
+    backgroundSelected: '#E4E7EC',
+    textSecondary: '#495162',
+    textMuted: '#8A909C',
+    border: '#E1E4EA',
+    primary: '#0894AE',
+    primaryDark: '#067A8F',
+    primarySoft: '#E7F6F9',
+    onPrimary: '#ffffff',
+    danger: '#C62828',
+    dangerSoft: '#FDECEC',
+    success: '#15803D',
+    successSoft: '#EAF7EF',
+    warning: '#B45309',
+    warningSoft: '#FFF4E5',
+    info: '#1D5FD1',
+    infoSoft: '#EAF1FE',
+    /** Warm yellow of the sparkles in the assistant's mark. */
+    aiSpark: '#FFE27A',
+    purple: '#6D28D9',
+    purpleSoft: '#F0EBFE',
   },
   dark: {
     text: '#ffffff',
@@ -21,6 +39,23 @@ export const Colors = {
     backgroundElement: '#212225',
     backgroundSelected: '#2E3135',
     textSecondary: '#B0B4BA',
+    textMuted: '#8A909C',
+    border: '#2E3135',
+    primary: '#2BB8D1',
+    primaryDark: '#5BD0E3',
+    primarySoft: '#0E3A44',
+    onPrimary: '#001B21',
+    danger: '#FF6B6B',
+    dangerSoft: '#3A1A1A',
+    success: '#4ADE80',
+    successSoft: '#12301F',
+    warning: '#FBBF24',
+    warningSoft: '#3A2A0E',
+    info: '#6FA3FF',
+    infoSoft: '#14233F',
+    aiSpark: '#FFE27A',
+    purple: '#B79CFF',
+    purpleSoft: '#2A1F4A',
   },
 } as const;
 
@@ -59,6 +94,14 @@ export const Spacing = {
   four: 24,
   five: 32,
   six: 64,
+} as const;
+
+export const Radius = {
+  sm: 10,
+  md: 14,
+  lg: 18,
+  xl: 24,
+  pill: 999,
 } as const;
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;

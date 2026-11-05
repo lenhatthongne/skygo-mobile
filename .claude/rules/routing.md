@@ -1,0 +1,29 @@
+---
+paths:
+  - "src/app/**"
+---
+# Cấu trúc route (Expo Router)
+
+- Chia màn hình bằng route group `(ten)` và đặt `_layout.tsx` riêng cho từng group. Không dồn mọi thứ vào một layout.
+- `src/app/` chỉ chứa route. Component, hook, service, hằng số để ngoài, ví dụ `src/components/`, `src/hooks/`, `src/services/`.
+- Group không xuất hiện trong URL, nên hai file ở hai group khác nhau không được ra cùng một URL.
+- Các tab chính dùng thư mục thật (`trips/`, `account/`) thay vì group để tránh trùng URL; mỗi thư mục có `_layout.tsx` Stack riêng.
+
+Khung đã thống nhất:
+
+```
+src/app/
+  _layout.tsx        providers, Stack gốc, chặn route theo đăng nhập (Stack.Protected)
+  index.tsx          "/" chỉ chuyển hướng: đã đăng nhập → /home, chưa → /login
+  (auth)/            login, register, otp
+  (tabs)/            home, trips/, explore, account/
+  (search)/          công khai (không cần đăng nhập): search/ (form, airport, date, travellers, results, filters), flight/[id]/ (index = chi tiết, fares = chọn hạng vé)
+  (booking)/         booking/passengers, payment, result (chỉ khi đã đăng nhập; nhận fareClassId và số khách qua route params, báo giá lại ở màn đầu)
+```
+
+- Tab trang chủ là `(tabs)/home.tsx` (URL `/home`), không phải `(tabs)/index.tsx`: `index.tsx` ở gốc giữ URL `/` cho việc chuyển hướng, và hai route cùng URL ở hai group sẽ xung đột. Layout gốc đặt `unstable_settings = { anchor: 'index' }`.
+- Khi `Stack.Protected` đổi trạng thái, Expo Router chuyển về anchor; `/` không có route khớp thì web báo "Unmatched Route" ở `/(auth)`.
+- `(search)/_layout.tsx` bọc `SearchProvider`: tiêu chí và bộ lọc tìm kiếm sống trong context khi còn ở trong group; các picker (airport, date, travellers, filters) là modal ghi ngược vào context rồi `router.back()`. API công khai gọi với `skipAuth: true`, vì backend trả 401 cho cả endpoint public nếu token gửi kèm đã hết hạn.
+- Luồng tìm chuyến và đặt vé nằm ngoài `(tabs)` để ẩn thanh tab.
+- Màn dùng chung (hết phiên, mất mạng) đặt ở layout gốc.
+- Kiểm tra tài liệu Expo Router đúng phiên bản trong `package.json` trước khi dùng API layout, tab, sheet hay chặn route.
