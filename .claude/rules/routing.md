@@ -17,7 +17,9 @@ src/app/
   index.tsx          "/" chỉ chuyển hướng: đã đăng nhập → /home, chưa → /login
   (auth)/            login, register, otp
   (tabs)/            home, trips/ (chỉ danh sách + seats), explore, account/
-  (trip)/            trips/[id]/ (chi tiết, giá, ghế, vé, hủy): URL /trips/[id] nhưng nằm trên tab, nên tab "Chuyến đi" chỉ chứa danh sách
+  (trip)/            trips/[id]/ (chi tiết, giá, đổi ghế, vé, hủy) và trips/seats: URL /trips/... nhưng nằm trên tab, nên tab "Chuyến đi" chỉ chứa danh sách
+  (support)/         account/support-new (modal), support-detail (chat), support (chuyển sang Tin nhắn), faq
+  (passengers)/      account/passengers, passenger (modal)
   (search)/          công khai (không cần đăng nhập): search/ (form, airport, date, travellers, results, filters), flight/[id]/ (index = chi tiết, fares = chọn hạng vé)
   (booking)/         booking/passengers, payment, result (chỉ khi đã đăng nhập; nhận fareClassId và số khách qua route params, báo giá lại ở màn đầu)
 ```
@@ -28,3 +30,5 @@ src/app/
 - Luồng tìm chuyến và đặt vé nằm ngoài `(tabs)` để ẩn thanh tab.
 - Màn dùng chung (hết phiên, mất mạng) đặt ở layout gốc.
 - Kiểm tra tài liệu Expo Router đúng phiên bản trong `package.json` trước khi dùng API layout, tab, sheet hay chặn route.
+- **Quy tắc chống xung đột tab:** màn nào có thể được mở từ ngoài tab của nó (Trang chủ, Thông báo, trợ lý, thông báo đẩy, luồng đặt vé) phải nằm trong một route group ở gốc (`(trip)`, `(support)`, `(passengers)`), không đặt trong stack của tab. Màn nằm trong stack của tab khi mở từ ngoài sẽ chuyển sang tab đó và chồng lên màn gốc, che tab cho tới khi tắt app. Stack của tab chỉ giữ màn chỉ mở từ chính tab đó (Tài khoản: hồ sơ, voucher, thanh toán, cài đặt, đổi mật khẩu).
+
