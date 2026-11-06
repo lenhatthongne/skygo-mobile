@@ -137,17 +137,18 @@ export function entryTab(entry: TripEntry, now: number): TripTab {
   return tabs.includes('past') ? 'past' : 'cancelled';
 }
 
-const entryDeparture = (entry: TripEntry) =>
-  Math.min(
-    ...(entry.kind === 'single' ? [entry.booking] : entry.legs).map((b) =>
-      Date.parse(b.flight.departureAt),
+/** When the customer last acted on a trip: the newest booking or payment time of its legs. */
+const entryActivity = (entry: TripEntry) =>
+  Math.max(
+    ...(entry.kind === 'single' ? [entry.booking] : entry.legs).flatMap((b) =>
+      [b.createdAt, b.confirmedAt].map((t) => (t ? Date.parse(t) : 0)),
     ),
   );
 
-/** Entries of one tab; upcoming ones by their earliest departure, the rest in server order. */
+/** Entries of one tab; upcoming ones with the most recently booked or paid first. */
 export function entriesForTab(items: Api.Booking[], tab: TripTab, now: number) {
   const list = groupTrips(items).filter((e) => entryTab(e, now) === tab);
-  if (tab === 'upcoming') list.sort((a, b) => entryDeparture(a) - entryDeparture(b));
+  if (tab === 'upcoming') list.sort((a, b) => entryActivity(b) - entryActivity(a));
   return list;
 }
 
