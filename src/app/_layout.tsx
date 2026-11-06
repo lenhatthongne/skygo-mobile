@@ -7,7 +7,6 @@ import { AppState, useColorScheme, View } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { restoreLanguage } from '@/i18n';
-import { InAppNotificationBanner } from '@/components/notifications/in-app-banner';
 import { SessionExpiredDialog } from '@/components/session/session-expired-dialog';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
 import { useSupportNotifications } from '@/hooks/use-support-notifications';
@@ -98,7 +97,6 @@ function RootNavigator() {
       </Stack>
       <PushNotificationBridge />
       <SupportNotificationBridge enabled={status === 'signedIn'} />
-      {signedIn ? <InAppNotificationBanner /> : null}
       <SessionExpiredDialog />
     </>
   );

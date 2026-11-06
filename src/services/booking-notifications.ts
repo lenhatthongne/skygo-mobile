@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 
 import i18n from '@/i18n';
-import { announceNotification } from '@/services/notification-inbox';
+import { addNotification } from '@/services/notification-inbox';
 import { ensureChannel, hasPushDevice, Notifications } from '@/services/push/push-notifications';
 import { formatDayMonth, formatTime, vnDateOf } from '@/utils/datetime';
 
@@ -31,7 +31,7 @@ export async function notifyBookingConfirmed(booking: Api.Booking, userId: numbe
     });
 
     // Same identifier as the phone banner, so the banner arriving later is not listed twice.
-    announceNotification({
+    addNotification({
       id: identifier,
       type: 'BOOKING_CONFIRMED',
       bookingId: booking.id,

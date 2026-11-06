@@ -5,6 +5,7 @@ import { AppState } from 'react-native';
 import { toApiError } from '@/services/api/errors';
 import { errorMessage } from '@/utils/error-messages';
 import { markSupportConversationRead, setActiveSupportView } from '@/services/notification-inbox';
+import { dismissSupportNotifications } from '@/services/support-notifications';
 import { subscribeSupportEvents, useSupportSocketConnected } from '@/services/support-socket';
 import { getSupportThread, sendSupportMessage, type SupportImage } from '@/services/api/support';
 
@@ -61,7 +62,10 @@ export function useSupportThread(requestId: number) {
         setRequest(thread.request);
         merge(thread.messages);
         // Opening the conversation reads its replies: the bell stops counting them.
-        if (first || thread.messages.length > 0) markSupportConversationRead(requestId);
+        if (first || thread.messages.length > 0) {
+          markSupportConversationRead(requestId);
+          void dismissSupportNotifications(requestId);
+        }
         setError(null);
         setOffline(false);
       } catch (e) {

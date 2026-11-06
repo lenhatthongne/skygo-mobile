@@ -193,7 +193,6 @@ export const vi = {
     minutesAgo: '{{count}} phút trước',
     hoursAgo: '{{count}} giờ trước',
     unread: 'Chưa đọc',
-    close: 'Đóng thông báo',
     systemOffTitle: 'Thông báo hệ thống đang tắt',
     systemOffText: 'Bật thông báo cho SkyGo trong cài đặt điện thoại để nhận nhắc giờ bay và thông báo đặt vé ngay trên màn hình.',
     openSettings: 'Mở cài đặt',

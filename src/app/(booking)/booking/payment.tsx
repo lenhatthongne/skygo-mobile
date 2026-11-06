@@ -128,7 +128,8 @@ export default function PaymentScreen() {
       const result = await payBooking(bookingId, key, payload);
       setPending(null);
       if (result.bookingStatus === 'CONFIRMED' && booking && user) {
-        void notifyBookingConfirmed(booking, user.id);
+        // The code is assigned when the payment succeeds: the booking loaded before has none yet.
+        void notifyBookingConfirmed({ ...booking, bookingCode: result.bookingCode }, user.id);
       }
       if (result.bookingStatus === 'PENDING_PAYMENT') {
         // The payment was cancelled; the reservation is kept.

@@ -42,3 +42,6 @@ example
 /ios
 /android
 /release
+
+# Firebase client config for Android push (project configuration, keep out of public repos)
+google-services.json

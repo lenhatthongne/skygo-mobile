@@ -4,12 +4,7 @@ import { AppState } from 'react-native';
 
 import { useSession } from '@/providers/session-provider';
 import { openInboxItem } from '@/utils/notification-target';
-import {
-  addNotification,
-  announceNotification,
-  bindInboxUser,
-  markRead,
-} from '@/services/notification-inbox';
+import { addNotification, bindInboxUser, markRead } from '@/services/notification-inbox';
 import {
   Notifications,
   parseBookingPush,
@@ -42,12 +37,12 @@ export function usePushNotifications() {
       return;
     }
     let active = true;
-    const count = (request: Notifications.NotificationRequest, date: number, announce = false) => {
+    const count = (request: Notifications.NotificationRequest, date: number) => {
       const push = parseBookingPush(request.content.data);
       if (!push || (push.userId !== null && push.userId !== userId)) return;
       const type = (request.content.data as { type?: unknown }).type;
       if (type !== 'BOOKING_CONFIRMED' && type !== 'FLIGHT_REMINDER') return;
-      (announce ? announceNotification : addNotification)({
+      addNotification({
         id: request.identifier,
         type,
         bookingId: push.bookingId,
@@ -65,9 +60,7 @@ export function usePushNotifications() {
       }
     };
     void bindInboxUser(userId).then(syncTray);
-    const received = Notifications.addNotificationReceivedListener((n) =>
-      count(n.request, n.date, true),
-    );
+    const received = Notifications.addNotificationReceivedListener((n) => count(n.request, n.date));
     const appState = AppState.addEventListener('change', (s) => {
       if (s === 'active') void syncTray();
     });

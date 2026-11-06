@@ -203,7 +203,6 @@ export const en: Resources = {
     minutesAgo: '{{count}} min ago',
     hoursAgo: '{{count}} h ago',
     unread: 'Unread',
-    close: 'Dismiss notification',
     systemOffTitle: 'System notifications are off',
     systemOffText: 'Turn on notifications for SkyGo in your phone settings to get flight reminders and booking alerts on your screen.',
     openSettings: 'Open settings',

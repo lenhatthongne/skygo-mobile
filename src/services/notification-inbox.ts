@@ -42,7 +42,7 @@ function publish() {
 /** The support screen showing now: a conversation id, 'list' for Messages, or nothing. */
 let activeSupport: number | 'list' | null = null;
 
-/** Called by the chat and Messages screens so a reply they already show raises no strip. */
+/** Called by the chat and Messages screens so a reply they already show raises no notification. */
 export function setActiveSupportView(view: number | 'list' | null) {
   activeSupport = view;
 }
@@ -101,17 +101,14 @@ export function addNotification(item: Omit<InboxItem, 'read'>) {
   return true;
 }
 
-const announceListeners = new Set<(item: InboxItem) => void>();
-
 /**
  * Lists a reply from SkyGo support like any notification (the bell counts it, tapping opens the
- * chat) and, when `announce` is on, shows the in-app strip. Nothing happens when the customer is
- * already looking at that conversation or at Messages: they have just seen it. Returns whether the
- * reply was newly listed.
+ * chat). Nothing happens when the customer is already looking at that conversation or at Messages:
+ * they have just seen it. Returns whether the reply was newly listed.
  */
-export function notifySupportReply(item: Omit<InboxItem, 'read'>, announce: boolean) {
+export function notifySupportReply(item: Omit<InboxItem, 'read'>) {
   if (activeSupport === 'list' || activeSupport === Number(item.bookingId)) return false;
-  return (announce ? announceNotification : addNotification)(item);
+  return addNotification(item);
 }
 
 /** The customer opened this conversation: its replies in the list no longer count as unread. */
@@ -126,23 +123,7 @@ export function markSupportConversationRead(requestId: number) {
 }
 
 /**
- * Lists a notification that has just arrived while the app is open and tells the in-app banner
- * about it. A notification that was already listed (or one only found in the tray) is not announced.
- */
-export function announceNotification(item: Omit<InboxItem, 'read'>) {
-  if (addNotification(item)) announceListeners.forEach((l) => l({ ...item, read: false }));
-}
-
-export function onNotificationAnnounced(listener: (item: InboxItem) => void) {
-  announceListeners.add(listener);
-  return () => {
-    announceListeners.delete(listener);
-  };
-}
-
-/**
- * The customer tapped this notification (on the Notifications screen, on the in-app strip or in the
- * phone's tray): only that one is read. Opening a booking by another way does not read anything.
+ * The customer tapped this notification (on the Notifications screen or in the phone's tray): only that one is read. Opening a booking by another way does not read anything.
  */
 export function markRead(notificationId: string) {
   if (supported) {

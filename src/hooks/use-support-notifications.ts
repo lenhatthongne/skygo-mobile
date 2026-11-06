@@ -55,7 +55,7 @@ export function useSupportNotifications(enabled: boolean, userId: number | undef
             at: r.lastMessageAt,
           };
           // A new reply also shows on the phone itself, like "Đặt vé thành công" after paying.
-          if (notifySupportReply(item, !first) && !first && userId !== undefined) {
+          if (notifySupportReply(item) && !first && userId !== undefined) {
             void showSupportReplyNotification({ ...item, requestId: r.id }, userId);
           }
         }
