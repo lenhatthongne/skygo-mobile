@@ -15,6 +15,7 @@ import { useNow } from '@/hooks/use-now';
 import { useRefreshOnFocus } from '@/hooks/use-refresh-on-focus';
 import { useRemoteList } from '@/hooks/use-remote-list';
 import { listMySupportRequests } from '@/services/api/support';
+import { subscribeSupportEvents, useSupportSocketConnected } from '@/services/support-socket';
 import { reminderPermission } from '@/services/flight-reminders';
 import { useTheme } from '@/hooks/use-theme';
 import {
@@ -33,6 +34,7 @@ import { openInboxItem } from '@/utils/notification-target';
 
 const HOUR_MS = 3600_000;
 const MESSAGES_POLL_MS = 12_000;
+const MESSAGES_POLL_LIVE_MS = 45_000;
 
 type InboxTab = 'notifications' | 'messages';
 
@@ -51,6 +53,7 @@ export default function NotificationsScreen() {
   const [chosen, setTab] = useState<InboxTab | null>(null);
   const tab: InboxTab = chosen ?? (tabParam === 'messages' ? 'messages' : 'notifications');
   const focused = useIsFocused();
+  const live = useSupportSocketConnected();
   const conversations = useRemoteList(loadConversations);
   const reloadList = conversations.reload;
 
@@ -64,12 +67,15 @@ export default function NotificationsScreen() {
     if (tab !== 'messages' || !focused) return;
     // The list is on screen, so a reply needs no extra strip over it.
     setActiveSupportView('list');
-    const timer = setInterval(reloadMessages, MESSAGES_POLL_MS);
+    // A hint from the server refreshes the list at once; the timer is only the fallback.
+    const off = subscribeSupportEvents(reloadMessages);
+    const timer = setInterval(reloadMessages, live ? MESSAGES_POLL_LIVE_MS : MESSAGES_POLL_MS);
     return () => {
+      off();
       clearInterval(timer);
       setActiveSupportView(null);
     };
-  }, [tab, focused, reloadMessages]);
+  }, [tab, focused, reloadMessages, live]);
   // null until known; false when the phone blocks notifications for SkyGo.
   const [systemOn, setSystemOn] = useState<boolean | null>(null);
 

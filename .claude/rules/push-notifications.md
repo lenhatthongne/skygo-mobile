@@ -25,6 +25,11 @@ Code: `src/services/push/push-notifications.ts`, `src/hooks/use-push-notificatio
 - Không báo gì khi khách đang xem đúng hội thoại đó hoặc đang ở thẻ Tin nhắn (`setActiveSupportView`). Mở hội thoại đánh dấu các trả lời của nó là đã đọc (`markSupportConversationRead`) và đánh dấu đã đọc trên server.
 - Màn Thông báo (`src/app/notifications.tsx`) có hai thẻ: Thông báo và Tin nhắn (`?tab=messages`, danh sách hội thoại kiểu ứng dụng chat, `ConversationList`, không có số đếm ở thẻ). Mục "Yêu cầu hỗ trợ" ở Tài khoản và lối tắt "Hỗ trợ" mở thẳng thẻ Tin nhắn; `/account/support` chỉ chuyển sang đó.
 
+## Kết nối trực tiếp (WebSocket)
+- `src/services/support-socket.ts` giữ một kết nối tới `/api/ws/support` khi app mở, đã đăng nhập (xác thực bằng tin đầu tiên, không đặt token trên địa chỉ), tự nối lại với thời gian chờ tăng dần, đóng khi app xuống nền. Server chỉ báo "hội thoại X đã đổi"; khung chat, thẻ Tin nhắn và việc kiểm tra thông báo đọc ngay qua API khi nhận được báo.
+- Hỏi định kỳ vẫn giữ làm dự phòng: 4 giây (chat) khi mất kết nối, 30 giây khi đang kết nối; thẻ Tin nhắn 12 giây hoặc 45 giây.
+- Chạm thông báo trả lời của SkyGo (danh sách hoặc dải trong app) mở thẳng khung chat và đưa con trỏ vào ô nhập (`focus=1`) để trả lời ngay.
+
 ## Bấm tab
 - Bấm một tab, hoặc quay lại tab từ tab khác, đưa tab về màn đầu, cuộn lên đầu và tải lại (`src/hooks/use-tab-reset.ts`: `useTabResetSource` đặt ở gốc mỗi tab, `useScrollToTopOnTabReset`, `useReloadOnTabReset`). Tab Chuyến đi quay về thẻ "Sắp tới". Quay lại từ màn mở trên thanh tab (thanh toán, ghế, chi tiết đặt chỗ) không phải là reset: khách ở lại đúng chỗ.
 

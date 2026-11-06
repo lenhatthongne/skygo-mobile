@@ -5,9 +5,12 @@ import { AppState } from 'react-native';
 import { toApiError } from '@/services/api/errors';
 import { errorMessage } from '@/utils/error-messages';
 import { markSupportConversationRead, setActiveSupportView } from '@/services/notification-inbox';
+import { subscribeSupportEvents, useSupportSocketConnected } from '@/services/support-socket';
 import { getSupportThread, sendSupportMessage, type SupportImage } from '@/services/api/support';
 
+// Polling is the fallback: quick while the live connection is down, a safety net while it is up.
 const POLL_MS = 4000;
+const POLL_LIVE_MS = 30_000;
 
 /** A message the customer just wrote that the server has not confirmed yet (or could not take). */
 export type PendingMessage = {
@@ -33,6 +36,7 @@ export function useSupportThread(requestId: number) {
   const [error, setError] = useState<unknown>(null);
   const [offline, setOffline] = useState(false);
   const focused = useIsFocused();
+  const live = useSupportSocketConnected();
   const lastId = useRef(0);
   const busy = useRef(false);
 
@@ -83,12 +87,16 @@ export function useSupportThread(requestId: number) {
     let timer: ReturnType<typeof setInterval> | null = null;
     const start = () => {
       if (timer) return;
-      timer = setInterval(() => void fetchNew(controller.signal), POLL_MS);
+      timer = setInterval(() => void fetchNew(controller.signal), live ? POLL_LIVE_MS : POLL_MS);
     };
     const stop = () => {
       if (timer) clearInterval(timer);
       timer = null;
     };
+    // The server says this conversation changed: read it now, not at the next poll.
+    const off = subscribeSupportEvents((event) => {
+      if (event.requestId === requestId) void fetchNew(controller.signal);
+    });
     if (AppState.currentState === 'active') start();
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
@@ -100,9 +108,10 @@ export function useSupportThread(requestId: number) {
       controller.abort();
       stop();
       sub.remove();
+      off();
       setActiveSupportView(null);
     };
-  }, [focused, fetchNew, requestId]);
+  }, [focused, fetchNew, requestId, live]);
 
   const deliver = useCallback(
     async (item: PendingMessage) => {

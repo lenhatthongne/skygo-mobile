@@ -5,7 +5,9 @@ import i18n from '@/i18n';
 import { toApiError } from '@/services/api/errors';
 import { getSupportUnread, listMySupportRequests } from '@/services/api/support';
 import { notifySupportReply } from '@/services/notification-inbox';
+import { subscribeSupportEvents } from '@/services/support-socket';
 
+// The live connection delivers replies at once; this polling is only the fallback when it is down.
 const POLL_MS = 15_000;
 
 /**
@@ -63,6 +65,8 @@ export function useSupportNotifications(enabled: boolean) {
       }
     }
 
+    // A hint from the server means a conversation changed: look right away.
+    const off = subscribeSupportEvents(() => void check());
     const start = setTimeout(() => void check(), 2000);
     const timer = setInterval(() => void check(), POLL_MS);
     const sub = AppState.addEventListener('change', (state) => {
@@ -73,6 +77,7 @@ export function useSupportNotifications(enabled: boolean) {
       clearTimeout(start);
       clearInterval(timer);
       sub.remove();
+      off();
     };
   }, [enabled]);
 }

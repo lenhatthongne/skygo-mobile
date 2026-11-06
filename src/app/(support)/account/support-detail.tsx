@@ -48,7 +48,7 @@ export default function SupportChatScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, focus } = useLocalSearchParams<{ id: string; focus?: string }>();
   const requestId = Number(id);
   const thread = useSupportThread(requestId);
   const [text, setText] = useState('');
@@ -224,6 +224,7 @@ export default function SupportChatScreen() {
               </Pressable>
               <View style={[styles.inputBox, { backgroundColor: theme.backgroundElement }]}>
                 <TextInput
+                  autoFocus={focus === '1'}
                   accessibilityLabel={t('supportChat.placeholder')}
                   value={text}
                   onChangeText={setText}
