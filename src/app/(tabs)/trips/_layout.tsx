@@ -21,5 +21,20 @@ export default function TripsLayout() {
     });
   }, [navigation]);
 
+  // Tapping "Chuyến đi" always shows the list, also when the tab is already selected: only iOS pops
+  // a selected tab's stack by itself, so on Android the booking opened after paying kept covering
+  // the list. Screens opened by a link (after paying, from a notification) do not emit a tab press.
+  useEffect(() => {
+    const onPress = () => {
+      const tabs = navigation.getState();
+      const stackKey = tabs?.routes.find((r) => r.name === 'trips')?.state?.key;
+      if (stackKey) navigation.dispatch({ type: 'POP_TO_TOP', target: stackKey });
+    };
+    return (navigation as { addListener: (e: string, cb: () => void) => () => void }).addListener(
+      'tabPress',
+      onPress,
+    );
+  }, [navigation]);
+
   return <Stack screenOptions={{ headerShown: false }} />;
 }
