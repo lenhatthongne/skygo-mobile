@@ -1,14 +1,9 @@
-import {
-  Camera,
-  type CameraRef,
-  GeoJSONSource,
-  Layer,
-  Map,
-  NativeUserLocation,
-} from '@maplibre/maplibre-react-native';
+import type { CameraRef } from '@maplibre/maplibre-react-native';
 import { useEffect, useRef } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { AppText } from '@/components/ui/app-text';
+import i18n from '@/i18n';
 import { useTheme } from '@/hooks/use-theme';
 import type { Coords } from '@/utils/geo';
 
@@ -34,7 +29,48 @@ const FONT = ['Noto Sans Bold'];
 // Roughly all of Vietnam.
 const VIETNAM = { center: [106.5, 15.8] as [number, number], zoom: 4.6 };
 
-export function AirportsMap({ airports, selectedCode, user, onSelect }: AirportsMapProps) {
+type MapLibreModule = typeof import('@maplibre/maplibre-react-native');
+
+/**
+ * MapLibre is a native module. Expo Go, and any build made before it was added, do not contain it
+ * and importing it throws; that used to take the whole Explore tab down. Loading it defensively
+ * turns the map into a notice while the airport list keeps working.
+ */
+function loadMapLibre(): MapLibreModule | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require('@maplibre/maplibre-react-native');
+  } catch {
+    return null;
+  }
+}
+
+const MapLibre = loadMapLibre();
+
+export function AirportsMap(props: AirportsMapProps) {
+  if (!MapLibre) return <MapUnavailable />;
+  return <LiveMap {...props} lib={MapLibre} />;
+}
+
+function MapUnavailable() {
+  const theme = useTheme();
+  return (
+    <View style={[styles.map, styles.unavailable, { backgroundColor: theme.backgroundElement }]}>
+      <AppText tone="textSecondary" style={styles.unavailableText}>
+        {i18n.t('explore.mapUnavailable')}
+      </AppText>
+    </View>
+  );
+}
+
+function LiveMap({
+  airports,
+  selectedCode,
+  user,
+  onSelect,
+  lib,
+}: AirportsMapProps & { lib: MapLibreModule }) {
+  const { Camera, GeoJSONSource, Layer, Map, NativeUserLocation } = lib;
   const theme = useTheme();
   const camera = useRef<CameraRef>(null);
 
@@ -65,7 +101,7 @@ export function AirportsMap({ airports, selectedCode, user, onSelect }: Airports
       mapStyle={MAP_STYLE}
       logo={false}
       compass={false}
-      accessibilityLabel="Bản đồ các sân bay SkyGo">
+      accessibilityLabel={i18n.t('explore.mapLabel')}>
       <Camera ref={camera} initialViewState={VIETNAM} />
       {user ? <NativeUserLocation /> : null}
       <GeoJSONSource
@@ -110,4 +146,6 @@ export function AirportsMap({ airports, selectedCode, user, onSelect }: Airports
 
 const styles = StyleSheet.create({
   map: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
+  unavailable: { alignItems: 'center', justifyContent: 'center', padding: 32 },
+  unavailableText: { textAlign: 'center' },
 });

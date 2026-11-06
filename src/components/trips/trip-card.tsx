@@ -1,4 +1,5 @@
 import { Feather } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AirlineBadge } from '@/components/flight/airline-badge';
@@ -29,6 +30,7 @@ export function TripCard({
   offline = false,
 }: TripCardProps) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { flight } = booking;
   const status = BOOKING_STATUS[booking.status];
   const toneColor = theme[status.tone];
@@ -42,7 +44,7 @@ export function TripCard({
 
   const date = vnDateOf(flight.departureAt);
   const when = `${weekdayName(date)}, ${formatDayMonth(date)} · ${formatTime(flight.departureAt)}`;
-  const guests = `${booking.seatCount} khách`;
+  const guests = t('common.guests', { count: booking.seatCount });
 
   const unpaid = booking.status === 'PENDING_PAYMENT' || booking.status === 'PAYMENT_FAILED';
   const remaining = Math.max(0, Math.ceil((Date.parse(booking.holdExpiresAt) - now) / 1000));
@@ -52,7 +54,12 @@ export function TripCard({
     <View style={[styles.card, { backgroundColor: theme.background, borderColor: theme.border }]}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${flight.origin} đến ${flight.destination}, ${when}, ${status.label}`}
+        accessibilityLabel={t('trips.card.route', {
+          from: flight.origin,
+          to: flight.destination,
+          when,
+          status: status.label,
+        })}
         onPress={onOpen}
         style={({ pressed }) => [styles.info, { opacity: pressed ? 0.85 : 1 }]}>
         <View style={styles.top}>
@@ -76,7 +83,8 @@ export function TripCard({
             </AppText>
             {booking.leg ? (
               <AppText variant="caption" tone="primaryDark" style={styles.leg}>
-                Khứ hồi · {booking.leg === 'OUTBOUND' ? 'Chặng đi' : 'Chặng về'}
+                {t('trips.roundTrip')} ·{' '}
+                {booking.leg === 'OUTBOUND' ? t('trips.legOut') : t('trips.legBack')}
               </AppText>
             ) : null}
             <AppText variant="small" tone="textMuted">
@@ -93,18 +101,21 @@ export function TripCard({
 
       {unpaid && offline ? (
         <AppText variant="small" tone="textMuted" style={styles.note}>
-          Cần kết nối mạng để thanh toán.
+          {t('trips.card.needNetwork')}
         </AppText>
       ) : unpaid && remaining > 0 ? (
         <View style={[styles.footer, { borderColor: theme.border }]}>
           <View style={styles.hint}>
             <Feather name="clock" size={18} color={theme.warning} />
             <AppText variant="smallBold" tone="warning" style={styles.hintText}>
-              Còn {clock(remaining)} để thanh toán
+              {t('trips.card.timeLeft', { time: clock(remaining) })}
             </AppText>
           </View>
           <Button
-            label={booking.status === 'PAYMENT_FAILED' ? 'Thanh toán lại' : 'Thanh toán'}
+            label={
+              booking.status === 'PAYMENT_FAILED' ? t('trips.card.payAgain') : t('trips.card.pay')
+            }
+            size="sm"
             onPress={onPay}
             style={styles.action}
           />
@@ -114,19 +125,20 @@ export function TripCard({
           <View style={styles.hint}>
             <Feather name="check-circle" size={18} color={theme.success} />
             <AppText variant="small" tone="textSecondary" style={styles.hintText}>
-              {offline ? 'Xem được khi ngoại tuyến' : 'Vé điện tử đã sẵn sàng'}
+              {offline ? t('trips.card.ticketOffline') : t('trips.card.ticketReady')}
             </AppText>
           </View>
           <Button
-            label={offline ? 'Mở vé QR' : 'Xem vé'}
+            label={offline ? t('trips.card.openQr') : t('trips.card.viewTicket')}
             variant={offline ? 'primary' : 'outline'}
+            size="sm"
             onPress={onTicket}
             style={styles.action}
           />
         </View>
       ) : booking.status === 'CANCEL_REQUESTED' ? (
         <AppText variant="small" tone="textSecondary" style={styles.note}>
-          Vé vẫn hợp lệ trong thời gian chờ duyệt.
+          {t('trips.card.stillValid')}
         </AppText>
       ) : null}
     </View>
@@ -170,6 +182,6 @@ const styles = StyleSheet.create({
   },
   hint: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
   hintText: { flexShrink: 1 },
-  action: { height: 44, paddingHorizontal: 18, minWidth: 110 },
+  action: { minWidth: 124 },
   note: { marginTop: -2 },
 });

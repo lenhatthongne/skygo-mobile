@@ -10,6 +10,9 @@ declare namespace Api {
     minOrder: number;
     /** ISO-8601 UTC, or null when it does not expire. */
     expiresAt: string | null;
-    status: 'AVAILABLE' | 'USED' | 'EXPIRED';
+    /** HELD: attached to an unpaid booking; spent when it is paid, back if it expires. */
+    status: 'AVAILABLE' | 'HELD' | 'USED' | 'EXPIRED';
+    /** Belongs to the account (granted, or saved from the public list). */
+    saved: boolean;
   }
 }

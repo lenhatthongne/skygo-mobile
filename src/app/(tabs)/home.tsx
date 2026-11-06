@@ -10,6 +10,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { AssistantFab } from '@/components/assistant/assistant-fab';
 import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
+import { useUnreadCount } from '@/services/notification-inbox';
 import { Radius } from '@/constants/theme';
 import { useBookings } from '@/hooks/use-bookings';
 import { useNow } from '@/hooks/use-now';
@@ -17,10 +18,9 @@ import { useTheme } from '@/hooks/use-theme';
 import { useSession } from '@/providers/session-provider';
 import { PromoBanners } from '@/components/home/promo-banners';
 import { QuickActions } from '@/components/home/quick-actions';
-import { VoucherList } from '@/components/home/voucher-list';
+import { DestinationShowcase } from '@/components/home/destination-showcase';
 import { getAirports, getPromotions } from '@/services/api/catalog';
 import i18n from '@/i18n';
-import { listMyVouchers } from '@/services/api/vouchers';
 import { formatDayMonth, formatTime, vnDateOf, weekdayName } from '@/utils/datetime';
 import { tripsForTab } from '@/utils/trips';
 
@@ -41,13 +41,15 @@ const CARD_COLORS = ['#0E7490', '#C2410C', '#15803D', '#7C3AED', '#BE185D', '#0F
 
 export default function HomeScreen() {
   const theme = useTheme();
+  const unread = useUnreadCount();
   const { t } = useTranslation();
   const { user } = useSession();
   const [destinations, setDestinations] = useState<Api.Airport[]>([]);
+  // City photos by airport code: banners of a destination use them as their picture.
+  const [photos, setPhotos] = useState<Record<string, string>>({});
   const [promotions, setPromotions] = useState<Api.Promotion[]>([]);
-  const [wallet, setWallet] = useState<Api.Voucher[]>([]);
   const now = useNow(false);
-  const { items: bookings } = useBookings();
+  const { items: bookings, loading: bookingsLoading, error: bookingsError } = useBookings();
   // The nearest paid trip that has not left yet.
   const next = tripsForTab(bookings, 'upcoming', now).find(
     (b) => b.status === 'CONFIRMED' || b.status === 'CANCEL_REQUESTED',
@@ -62,6 +64,9 @@ export default function HomeScreen() {
           (a): a is Api.Airport => !!a,
         );
         setDestinations(popular.length > 0 ? popular : list.slice(0, 4));
+        setPhotos(
+          Object.fromEntries(list.flatMap((a) => (a.imageUrl ? [[a.code, a.imageUrl]] : []))),
+        );
       })
       .catch(() => {
         // The destination cards are optional; the search box still works.
@@ -81,32 +86,7 @@ export default function HomeScreen() {
     return () => controller.abort();
   }, []);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    listMyVouchers(false, controller.signal)
-      .then(setWallet)
-      .catch(() => {
-        // Personal offers (like the new-customer voucher) are optional on Home.
-      });
-    return () => controller.abort();
-  }, []);
-
-  // Vouchers granted to this account that the campaign list does not already show.
-  const personal: Api.Promotion[] = wallet
-    .filter((v) => !promotions.some((p) => p.code === v.code))
-    .map((v) => ({
-      id: -v.code.length * 1000 - v.code.charCodeAt(0),
-      kind: 'VOUCHER',
-      title: v.title,
-      subtitle: v.expiresAt ? t('home.personalOfferOnce') : t('home.personalOffer'),
-      code: v.code,
-      imageUrl: null,
-      theme: 'TEAL',
-      destinationCode: null,
-      endsAt: v.expiresAt,
-    }));
   const banners = promotions.filter((p) => p.kind === 'BANNER');
-  const vouchers = [...personal, ...promotions.filter((p) => p.kind === 'VOUCHER')];
   const givenName = user?.fullName.trim().split(/\s+/).pop() ?? '';
 
   return (
@@ -122,6 +102,25 @@ export default function HomeScreen() {
               {t('home.prompt')}
             </AppText>
           </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              unread > 0 ? t('inbox.openUnread', { count: unread }) : t('inbox.open')
+            }
+            onPress={() => router.push('/notifications')}
+            hitSlop={6}
+            style={[styles.bell, { backgroundColor: theme.backgroundElement }]}>
+            <Feather name="bell" size={21} color={theme.text} />
+            {unread > 0 ? (
+              <View style={[styles.bellBadge, { backgroundColor: theme.danger }]}>
+                <AppText
+                  variant="caption"
+                  style={[styles.bellBadgeText, { color: theme.onPrimary }]}>
+                  {unread > 9 ? '9+' : unread}
+                </AppText>
+              </View>
+            ) : null}
+          </Pressable>
           <Avatar user={user} size={44} />
         </View>
 
@@ -139,9 +138,9 @@ export default function HomeScreen() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={t('home.nextTripLabel', {
-              from: next.flight.origin,
-              to: next.flight.destination,
-            })}
+                from: next.flight.origin,
+                to: next.flight.destination,
+              })}
               onPress={() => router.push({ pathname: '/trips/[id]', params: { id: next.id } })}
               style={styles.nextInfo}>
               <View style={styles.nextTop}>
@@ -158,7 +157,8 @@ export default function HomeScreen() {
               <AppText variant="small" style={[styles.nextLabel, { color: theme.onPrimary }]}>
                 {weekdayName(vnDateOf(next.flight.departureAt))},{' '}
                 {formatDayMonth(vnDateOf(next.flight.departureAt))} ·{' '}
-                {formatTime(next.flight.departureAt)} · {t('common.guests', { count: next.seatCount })}
+                {formatTime(next.flight.departureAt)} ·{' '}
+                {t('common.guests', { count: next.seatCount })}
               </AppText>
             </Pressable>
             <View style={styles.nextFoot}>
@@ -180,10 +180,34 @@ export default function HomeScreen() {
               ) : null}
             </View>
           </View>
+        ) : !bookingsLoading && !bookingsError ? (
+          // Only once the list really loaded empty: a slow or failed load must not read as "no trips".
+          <View
+            style={[
+              styles.next,
+              styles.noTrip,
+              { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+            ]}>
+            <View style={[styles.noTripIcon, { backgroundColor: theme.primarySoft }]}>
+              <Feather name="map" size={22} color={theme.primary} />
+            </View>
+            <View style={styles.noTripText}>
+              <AppText variant="bodyBold">{t('home.noTrip')}</AppText>
+              <AppText variant="caption" tone="textMuted">
+                {t('home.noTripText')}
+              </AppText>
+            </View>
+            <Button
+              size="sm"
+              label={t('home.bookNow')}
+              onPress={() => router.push('/search')}
+              style={styles.noTripButton}
+            />
+          </View>
         ) : null}
 
         <QuickActions />
-        <PromoBanners items={banners} />
+        <PromoBanners items={banners} photos={photos} />
 
         {destinations.length > 0 ? (
           <>
@@ -233,7 +257,7 @@ export default function HomeScreen() {
           </>
         ) : null}
 
-        <VoucherList items={vouchers} />
+        <DestinationShowcase destinations={destinations} />
       </Screen>
       <AssistantFab />
     </View>
@@ -243,6 +267,19 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 8 },
+  bell: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  bellBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellBadgeText: { fontSize: 11, lineHeight: 14, fontWeight: '700' },
   logo: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   avatar: {
     width: 44,
@@ -261,6 +298,16 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   next: { marginTop: 20, borderRadius: Radius.xl, padding: 18, gap: 12 },
+  noTrip: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, gap: 12 },
+  noTripIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noTripText: { flex: 1, gap: 2 },
+  noTripButton: { minWidth: 104 },
   nextInfo: { gap: 4 },
   nextFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   countPill: {

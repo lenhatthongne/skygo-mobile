@@ -17,7 +17,8 @@ import { errorMessage } from '@/utils/error-messages';
 import { fareName } from '@/utils/fares';
 import { formatVnd } from '@/utils/money';
 
-const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+const clock = (seconds: number) =>
+  `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 
 /** Shows the outcome of a booking from its server status: success, failed payment or expired hold. */
 export default function BookingResultScreen() {
@@ -62,11 +63,24 @@ export default function BookingResultScreen() {
       <Screen
         footer={
           <>
-            <Button label="Thử thanh toán lại" onPress={() => router.replace({ pathname: '/booking/payment', params: { bookingId } })} />
+            <Button
+              label="Thử thanh toán lại"
+              onPress={() =>
+                router.replace({
+                  pathname: '/booking/payment',
+                  params: { bookingId },
+                })
+              }
+            />
             <Button label="Về trang chủ" variant="ghost" onPress={goHome} />
           </>
         }>
-        <Hero icon="x" tone="danger" title="Thanh toán chưa thành công" text="Giao dịch bị từ chối và bạn chưa bị trừ tiền. Vui lòng thử lại hoặc chọn phương thức khác." />
+        <Hero
+          icon="x"
+          tone="danger"
+          title="Thanh toán chưa thành công"
+          text="Giao dịch bị từ chối và bạn chưa bị trừ tiền. Vui lòng thử lại hoặc chọn phương thức khác."
+        />
         <View style={[styles.card, { borderColor: theme.border }]}>
           <Row label="Số tiền" value={formatVnd(booking.totalAmount)} />
           <Row label="Chuyến bay" value={`${flight.origin} → ${flight.destination}`} />
@@ -93,7 +107,12 @@ export default function BookingResultScreen() {
             <Button label="Về trang chủ" variant="ghost" onPress={goHome} />
           </>
         }>
-        <Hero icon="clock" tone="muted" title="Hết thời gian giữ chỗ" text="Đơn đã hết hạn và chỗ đã được trả lại. Bạn chưa bị trừ tiền." />
+        <Hero
+          icon="clock"
+          tone="muted"
+          title="Hết thời gian giữ chỗ"
+          text="Đơn đã hết hạn và chỗ đã được trả lại. Bạn chưa bị trừ tiền."
+        />
         <View style={[styles.card, { borderColor: theme.border }]}>
           <Row label="Chuyến bay" value={`${flight.origin} → ${flight.destination}`} />
           <Row label="Ngày bay" value={formatDate(vnDateOf(flight.departureAt))} />
@@ -121,12 +140,22 @@ export default function BookingResultScreen() {
         <>
           <Button
             label="Xem vé điện tử"
-            onPress={() => router.replace({ pathname: '/trips/[id]/ticket', params: { id: booking.id } })}
+            onPress={() =>
+              router.replace({
+                pathname: '/trips/[id]/ticket',
+                params: { id: booking.id },
+              })
+            }
           />
           <Button label="Về trang chủ" variant="ghost" onPress={goHome} />
         </>
       }>
-      <Hero icon="check" tone="success" title="Đặt vé thành công" text="Vé điện tử đã được phát hành cho đơn của bạn." />
+      <Hero
+        icon="check"
+        tone="success"
+        title="Đặt vé thành công"
+        text="Vé điện tử đã được phát hành cho đơn của bạn."
+      />
 
       <View style={[styles.code, { backgroundColor: theme.backgroundElement }]}>
         <AppText variant="caption" tone="textMuted">
@@ -143,7 +172,11 @@ export default function BookingResultScreen() {
           }}
           style={styles.codeRow}>
           <AppText style={styles.codeText}>{booking.bookingCode ?? '—'}</AppText>
-          <Feather name={copied ? 'check' : 'copy'} size={18} color={copied ? theme.success : theme.textMuted} />
+          <Feather
+            name={copied ? 'check' : 'copy'}
+            size={18}
+            color={copied ? theme.success : theme.textMuted}
+          />
         </Pressable>
         {copied ? (
           <AppText variant="caption" tone="success">
@@ -177,7 +210,10 @@ export default function BookingResultScreen() {
           </View>
         </View>
         <View style={[styles.divider, { backgroundColor: theme.border }]} />
-        <Row label="Hành khách" value={`${booking.seatCount + booking.passengers.filter((p) => p.type === 'INF').length} khách`} />
+        <Row
+          label="Hành khách"
+          value={`${booking.seatCount + booking.passengers.filter((p) => p.type === 'INF').length} khách`}
+        />
         <Row label="Hạng vé" value={fareName(booking.fareClass)} />
         <Row label="Đã thanh toán" value={formatVnd(booking.totalAmount)} strong />
       </View>
@@ -197,8 +233,16 @@ function Hero({
   text: string;
 }) {
   const theme = useTheme();
-  const bg = { success: theme.successSoft, danger: theme.dangerSoft, muted: theme.backgroundElement }[tone];
-  const fg = { success: theme.success, danger: theme.danger, muted: theme.textMuted }[tone];
+  const bg = {
+    success: theme.successSoft,
+    danger: theme.dangerSoft,
+    muted: theme.backgroundElement,
+  }[tone];
+  const fg = {
+    success: theme.success,
+    danger: theme.danger,
+    muted: theme.textMuted,
+  }[tone];
   return (
     <View style={styles.hero}>
       <View style={[styles.ring, { backgroundColor: bg }]}>
@@ -230,13 +274,36 @@ const styles = StyleSheet.create({
   gap: { marginTop: 16 },
   gapSmall: { marginVertical: 8 },
   hero: { alignItems: 'center', gap: 10, marginTop: 48, marginBottom: 24 },
-  ring: { width: 84, height: 84, borderRadius: 42, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  ring: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
   centerText: { textAlign: 'center' },
-  card: { borderWidth: 1, borderRadius: Radius.lg, padding: 16, marginTop: 16, gap: 6 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 3 },
+  card: {
+    borderWidth: 1,
+    borderRadius: Radius.lg,
+    padding: 16,
+    marginTop: 16,
+    gap: 6,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 3,
+  },
   code: { borderRadius: Radius.lg, padding: 14, alignItems: 'center', gap: 2 },
   codeRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  codeText: { fontSize: 28, lineHeight: 34, fontWeight: '800', letterSpacing: 2 },
+  codeText: {
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: '800',
+    letterSpacing: 2,
+  },
   times: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   time: { fontSize: 24, lineHeight: 30, fontWeight: '800' },
   middle: { flex: 1, alignItems: 'center', gap: 4 },

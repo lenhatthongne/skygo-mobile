@@ -2,6 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Brightness from 'expo-brightness';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,7 +17,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useTicket } from '@/hooks/use-ticket';
 import { formatDate, formatDateTime, formatDuration, formatTime, vnDateOf } from '@/utils/datetime';
 import { errorMessage } from '@/utils/error-messages';
-import { FARE_NAMES } from '@/utils/fares';
+import { fareShortName } from '@/utils/fares';
 import { formatVnd } from '@/utils/money';
 
 const QR_SIZE = 220;
@@ -43,6 +44,7 @@ function useBoostedBrightness(active: boolean) {
 }
 
 export default function TicketScreen() {
+  const { t } = useTranslation();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -61,14 +63,14 @@ export default function TicketScreen() {
         <View style={styles.header}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Quay lại"
+            accessibilityLabel={t('ticketScreen.back')}
             hitSlop={8}
             onPress={() => router.back()}
             style={styles.back}>
             <Feather name="arrow-left" size={22} color="#ffffff" />
           </Pressable>
           <AppText variant="bodyBold" style={styles.title}>
-            Vé điện tử
+            {t('ticketScreen.title')}
           </AppText>
           <View style={styles.back} />
         </View>
@@ -83,7 +85,7 @@ export default function TicketScreen() {
           ) : error || !ticket ? (
             <View style={styles.errorBox}>
               <Banner tone="error">{errorMessage(error)}</Banner>
-              <Button label="Thử lại" onPress={reload} />
+              <Button label={t('ticketScreen.retry')} onPress={reload} />
             </View>
           ) : (
             <TicketBody
@@ -113,6 +115,7 @@ function TicketBody({
   cityOf: (code: string) => string;
   onRetry: () => void;
 }) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const { booking } = ticket;
   const { flight } = booking;
@@ -150,7 +153,7 @@ function TicketBody({
             </AppText>
             <View style={[styles.line, { borderColor: theme.border }]} />
             <AppText variant="caption" tone="textMuted">
-              Bay thẳng
+              {t('ticketScreen.direct')}
             </AppText>
           </View>
           <View style={styles.right}>
@@ -165,26 +168,26 @@ function TicketBody({
           <View style={styles.facts}>
             <View style={styles.flex}>
               <AppText variant="caption" tone="textMuted">
-                Hành khách
+                {t('ticketScreen.passenger')}
               </AppText>
               <AppText variant="bodyBold" numberOfLines={1}>
                 {lead.fullName}
               </AppText>
               {extra > 0 ? (
                 <AppText variant="small" tone="textMuted">
-                  +{extra} khách
+                  {t('ticketScreen.more', { extra })}
                 </AppText>
               ) : null}
             </View>
             <View>
               <AppText variant="caption" tone="textMuted">
-                Hạng vé
+                {t('ticketScreen.fare')}
               </AppText>
-              <AppText variant="bodyBold">{FARE_NAMES[booking.fareClass.classCode]?.replace('Phổ thông ', '')}</AppText>
+              <AppText variant="bodyBold">{fareShortName(booking.fareClass.classCode)}</AppText>
             </View>
             <View style={styles.factRight}>
               <AppText variant="caption" tone="textMuted">
-                Mã đặt chỗ
+                {t('ticketScreen.bookingCode')}
               </AppText>
               <AppText variant="bodyBold">{booking.bookingCode ?? '—'}</AppText>
             </View>
@@ -194,34 +197,47 @@ function TicketBody({
         {!revoked && booking.passengers.some((p) => p.seatCode) ? (
           <View style={styles.seats}>
             <AppText variant="caption" tone="textMuted">
-              Ghế
+              {t('ticketScreen.seat')}
             </AppText>
             <AppText variant="bodyBold">
               {booking.passengers
                 .filter((p) => p.seatCode)
-                .map((p) => (booking.passengers.length > 1 ? `${p.fullName}: ${p.seatCode}` : (p.seatCode as string)))
+                .map((p) =>
+                  booking.passengers.length > 1
+                    ? `${p.fullName}: ${p.seatCode}`
+                    : (p.seatCode as string),
+                )
                 .join(' · ')}
             </AppText>
           </View>
         ) : null}
 
         <View style={styles.tear}>
-          <View style={[styles.notch, styles.notchLeft, { backgroundColor: theme.backgroundElement }]} />
+          <View
+            style={[styles.notch, styles.notchLeft, { backgroundColor: theme.backgroundElement }]}
+          />
           <View style={[styles.tearLine, { borderColor: theme.border }]} />
-          <View style={[styles.notch, styles.notchRight, { backgroundColor: theme.backgroundElement }]} />
+          <View
+            style={[styles.notch, styles.notchRight, { backgroundColor: theme.backgroundElement }]}
+          />
         </View>
 
         <View style={styles.qrWrap}>
           <View style={[styles.qrBox, { borderColor: theme.border }]}>
             <View style={{ opacity: revoked ? 0.12 : 1 }}>
-              <QRCode value={ticket.qrContent} size={QR_SIZE} color="#000000" backgroundColor="#ffffff" />
+              <QRCode
+                value={ticket.qrContent}
+                size={QR_SIZE}
+                color="#000000"
+                backgroundColor="#ffffff"
+              />
             </View>
             {revoked ? (
               <View style={styles.overlay}>
                 <View style={[styles.revoked, { backgroundColor: theme.dangerSoft }]}>
                   <Feather name="x-circle" size={18} color={theme.danger} />
                   <AppText variant="bodyBold" tone="danger">
-                    Vé không còn hiệu lực
+                    {t('ticketScreen.invalid')}
                   </AppText>
                 </View>
               </View>
@@ -232,7 +248,7 @@ function TicketBody({
             <View style={[styles.valid, { backgroundColor: theme.successSoft }]}>
               <Feather name="check-circle" size={18} color={theme.success} />
               <AppText variant="bodyBold" tone="success">
-                Vé hợp lệ
+                {t('ticketScreen.valid')}
               </AppText>
             </View>
           ) : null}
@@ -240,7 +256,7 @@ function TicketBody({
           <View style={styles.sync}>
             <Feather name="refresh-cw" size={14} color={theme.textMuted} />
             <AppText variant="small" tone="textMuted">
-              Đồng bộ lúc {formatDateTime(ticket.syncedAt)}
+              {t('ticketScreen.synced', { time: formatDateTime(ticket.syncedAt) })}
             </AppText>
           </View>
         </View>
@@ -249,13 +265,24 @@ function TicketBody({
       {revoked ? (
         <View style={styles.after}>
           <Banner tone="error">
-            {booking.bookingCode ? `Đơn ${booking.bookingCode}` : 'Đơn này'} đã hủy nên mã QR đã bị thu hồi.
+            {t('ticketScreen.revoked', {
+              subject: booking.bookingCode
+                ? t('ticketScreen.revokedOrder', { code: booking.bookingCode })
+                : t('ticketScreen.revokedThis'),
+            })}
             {booking.priceSnapshot.refundable
-              ? ` Khoản hoàn tiền dự kiến ${formatVnd(Math.max(0, booking.totalAmount - booking.priceSnapshot.cancelFee * booking.seatCount))}.`
+              ? t('ticketScreen.refund', {
+                  amount: formatVnd(
+                    Math.max(
+                      0,
+                      booking.totalAmount - booking.priceSnapshot.cancelFee * booking.seatCount,
+                    ),
+                  ),
+                })
               : ''}
           </Banner>
           <Button
-            label="Xem chi tiết đặt chỗ"
+            label={t('ticketScreen.viewBooking')}
             variant="outline"
             onPress={() => router.replace({ pathname: '/trips/[id]', params: { id: booking.id } })}
           />
@@ -264,19 +291,18 @@ function TicketBody({
         <View style={styles.after}>
           {offline ? (
             <Banner tone="warning" icon="wifi-off">
-              Không có mạng. Đang hiển thị vé đã lưu lúc {formatDateTime(ticket.syncedAt)}. Trạng thái hiệu lực sẽ
-              được kiểm tra lại khi có mạng.
+              {t('ticketScreen.offline', { time: formatDateTime(ticket.syncedAt) })}
             </Banner>
           ) : (
             <View style={styles.hint}>
               <Feather name="info" size={18} color={theme.textMuted} style={styles.hintIcon} />
               <AppText variant="small" tone="textSecondary" style={styles.flex}>
-                Xuất trình mã này khi làm thủ tục. Vé đã được lưu trên máy và xem được khi không có mạng.
+                {t('ticketScreen.hint')}
               </AppText>
             </View>
           )}
           {offline ? (
-            <Button label="Thử kết nối lại" variant="outline" onPress={onRetry} />
+            <Button label={t('ticketScreen.reconnect')} variant="outline" onPress={onRetry} />
           ) : null}
         </View>
       )}
@@ -297,7 +323,13 @@ const styles = StyleSheet.create({
   center: { height: 320, alignItems: 'center', justifyContent: 'center' },
   errorBox: { gap: 16, paddingTop: 48 },
   airline: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 18 },
-  times: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 18, marginTop: 18 },
+  times: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 18,
+    marginTop: 18,
+  },
   time: { fontSize: 30, lineHeight: 36, fontWeight: '800', letterSpacing: -0.5 },
   middle: { flex: 1, alignItems: 'center', gap: 4 },
   line: { width: '100%', borderTopWidth: 1.5, borderStyle: 'dashed' },
@@ -312,7 +344,15 @@ const styles = StyleSheet.create({
   notchRight: { right: -14 },
   qrWrap: { alignItems: 'center', gap: 14, paddingBottom: 20, paddingTop: 6 },
   qrBox: { padding: 16, borderRadius: Radius.lg, borderWidth: 1, backgroundColor: '#ffffff' },
-  overlay: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center' },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   revoked: {
     flexDirection: 'row',
     alignItems: 'center',

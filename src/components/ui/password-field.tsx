@@ -1,5 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { type Ref, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useTheme } from '@/hooks/use-theme';
@@ -22,6 +23,7 @@ type PasswordFieldProps = {
 
 /** A password input with a show/hide toggle. */
 export function PasswordField({ autoComplete = 'current-password', ...props }: PasswordFieldProps) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const [shown, setShown] = useState(false);
   return (
@@ -36,7 +38,7 @@ export function PasswordField({ autoComplete = 'current-password', ...props }: P
       right={
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={shown ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+          accessibilityLabel={shown ? t('password.hide') : t('password.show')}
           hitSlop={10}
           onPress={() => setShown((v) => !v)}>
           <Feather name={shown ? 'eye-off' : 'eye'} size={19} color={theme.textMuted} />
@@ -47,12 +49,17 @@ export function PasswordField({ autoComplete = 'current-password', ...props }: P
 }
 
 /** Live checklist of the backend password rules. */
-export function PasswordRules({ checks }: { checks: { length: boolean; letter: boolean; digit: boolean } }) {
+export function PasswordRules({
+  checks,
+}: {
+  checks: { length: boolean; letter: boolean; digit: boolean };
+}) {
+  const { t } = useTranslation();
   return (
     <View style={styles.rules}>
-      <Rule ok={checks.length} text="Từ 8 đến 72 ký tự" />
-      <Rule ok={checks.letter} text="Có ít nhất một chữ cái" />
-      <Rule ok={checks.digit} text="Có ít nhất một chữ số" />
+      <Rule ok={checks.length} text={t('password.ruleLength')} />
+      <Rule ok={checks.letter} text={t('password.ruleLetter')} />
+      <Rule ok={checks.digit} text={t('password.ruleDigit')} />
     </View>
   );
 }
@@ -61,7 +68,11 @@ function Rule({ ok, text }: { ok: boolean; text: string }) {
   const theme = useTheme();
   return (
     <View style={styles.rule}>
-      <Feather name={ok ? 'check-circle' : 'circle'} size={17} color={ok ? theme.success : theme.textMuted} />
+      <Feather
+        name={ok ? 'check-circle' : 'circle'}
+        size={17}
+        color={ok ? theme.success : theme.textMuted}
+      />
       <AppText variant="small" tone={ok ? 'success' : 'textMuted'}>
         {text}
       </AppText>

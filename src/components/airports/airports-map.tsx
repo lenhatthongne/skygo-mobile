@@ -5,6 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 
 import { AppText } from '@/components/ui/app-text';
+import i18n from '@/i18n';
 import { useTheme } from '@/hooks/use-theme';
 import type { Coords } from '@/utils/geo';
 
@@ -26,7 +27,12 @@ export function AirportsMap({ airports, selectedCode, user, onSelect }: Airports
     const airport = airports.find((a) => a.code === selectedCode);
     if (airport) {
       map.current?.animateToRegion(
-        { latitude: airport.latitude, longitude: airport.longitude, latitudeDelta: 4, longitudeDelta: 4 },
+        {
+          latitude: airport.latitude,
+          longitude: airport.longitude,
+          latitudeDelta: 4,
+          longitudeDelta: 4,
+        },
         400,
       );
     }
@@ -41,13 +47,23 @@ export function AirportsMap({ airports, selectedCode, user, onSelect }: Airports
             key={a.code}
             coordinate={{ latitude: a.latitude, longitude: a.longitude }}
             onPress={() => onSelect(a.code)}
-            accessibilityLabel={`Sân bay ${a.name}`}>
+            accessibilityLabel={i18n.t('explore.airportLabel', { name: a.name })}>
             <View style={styles.marker}>
-              <View style={[styles.pin, { backgroundColor: selected ? theme.primary : theme.background }]}>
+              <View
+                style={[
+                  styles.pin,
+                  { backgroundColor: selected ? theme.primary : theme.background },
+                ]}>
                 <Feather name="send" size={16} color={selected ? theme.onPrimary : theme.primary} />
               </View>
-              <View style={[styles.label, { backgroundColor: selected ? '#1C2230' : theme.background }]}>
-                <AppText variant="caption" style={[styles.labelText, { color: selected ? '#ffffff' : theme.text }]}>
+              <View
+                style={[
+                  styles.label,
+                  { backgroundColor: selected ? '#1C2230' : theme.background },
+                ]}>
+                <AppText
+                  variant="caption"
+                  style={[styles.labelText, { color: selected ? '#ffffff' : theme.text }]}>
                   {a.code}
                 </AppText>
               </View>

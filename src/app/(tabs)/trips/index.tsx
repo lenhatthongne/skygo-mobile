@@ -1,6 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   FlatList,
@@ -18,6 +19,7 @@ import { Banner } from '@/components/ui/banner';
 import { Button } from '@/components/ui/button';
 import { RowErrorBoundary } from '@/components/ui/row-error-boundary';
 import { BottomTabInset, MaxContentWidth, Radius } from '@/constants/theme';
+import i18n from '@/i18n';
 import { useBookings } from '@/hooks/use-bookings';
 import { useNow } from '@/hooks/use-now';
 import { useRefreshOnFocus } from '@/hooks/use-refresh-on-focus';
@@ -26,28 +28,45 @@ import { formatDateTime } from '@/utils/datetime';
 import { errorMessage } from '@/utils/error-messages';
 import { entriesForTab, isPayable, TRIP_TABS, type TripTab } from '@/utils/trips';
 
-const EMPTY: Record<
-  TripTab,
-  { icon: React.ComponentProps<typeof Feather>['name']; title: string; text: string }
-> = {
+type EmptyState = {
+  icon: React.ComponentProps<typeof Feather>['name'];
+  title: string;
+  text: string;
+};
+
+// Read when the list renders, so the text follows the language chosen in Settings.
+const EMPTY: Record<TripTab, EmptyState> = {
   upcoming: {
     icon: 'map',
-    title: 'Chưa có chuyến đi sắp tới',
-    text: 'Các chuyến bạn đã đặt sẽ hiện ở đây. Hãy tìm chuyến bay đầu tiên của bạn.',
+    get title() {
+      return i18n.t('trips.emptyUpcomingTitle');
+    },
+    get text() {
+      return i18n.t('trips.emptyUpcomingText');
+    },
   },
   past: {
     icon: 'clock',
-    title: 'Chưa có chuyến đã bay',
-    text: 'Lịch sử các chuyến bay đã hoàn thành sẽ hiện ở đây.',
+    get title() {
+      return i18n.t('trips.emptyPastTitle');
+    },
+    get text() {
+      return i18n.t('trips.emptyPastText');
+    },
   },
   cancelled: {
     icon: 'x-circle',
-    title: 'Không có chuyến đã hủy',
-    text: 'Các đơn đã hủy hoặc hết hạn giữ chỗ sẽ hiện ở đây.',
+    get title() {
+      return i18n.t('trips.emptyCancelledTitle');
+    },
+    get text() {
+      return i18n.t('trips.emptyCancelledText');
+    },
   },
 };
 
 export default function TripsScreen() {
+  const { t } = useTranslation();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const {
@@ -64,7 +83,9 @@ export default function TripsScreen() {
   } = useBookings();
   // A one-second tick re-renders the whole list, so only tick that fast while a hold countdown is
   // on screen; otherwise half a minute is enough to move trips between tabs.
-  const counting = items.some((b) => b.status === 'PENDING_PAYMENT' || b.status === 'PAYMENT_FAILED');
+  const counting = items.some(
+    (b) => b.status === 'PENDING_PAYMENT' || b.status === 'PAYMENT_FAILED',
+  );
   const now = useNow(true, counting ? 1000 : 30_000);
   const [tab, setTab] = useState<TripTab>('upcoming');
 
@@ -89,7 +110,7 @@ export default function TripsScreen() {
       <View style={[styles.head, { backgroundColor: theme.background }]}>
         <View style={styles.inner}>
           <AppText variant="h1" style={styles.title}>
-            Chuyến đi
+            {t('trips.title')}
           </AppText>
           <View
             style={[styles.segment, { backgroundColor: theme.backgroundElement }]}
@@ -103,7 +124,13 @@ export default function TripsScreen() {
                   accessibilityState={{ selected }}
                   onPress={() => setTab(t.key)}
                   style={[styles.segmentItem, selected && { backgroundColor: theme.background }]}>
-                  <AppText variant="smallBold" tone={selected ? 'text' : 'textSecondary'}>
+                  {/* Never shrunk or wrapped: Android measured the shrinkable label too narrow and
+                      clipped "Đã bay" to "Đã". Each tab is wide enough for its own short label. */}
+                  <AppText
+                    variant="smallBold"
+                    tone={selected ? 'text' : 'textSecondary'}
+                    numberOfLines={1}
+                    style={styles.segmentLabel}>
                     {t.label}
                   </AppText>
                   {t.key === 'upcoming' && upcomingCount > 0 && !hasMore ? (
@@ -137,7 +164,7 @@ export default function TripsScreen() {
       ) : error ? (
         <View style={[styles.list, styles.inner]}>
           <Banner tone="error">{errorMessage(error)}</Banner>
-          <Button label="Thử lại" onPress={reload} style={styles.retry} />
+          <Button label={t('trips.retry')} onPress={reload} style={styles.retry} />
         </View>
       ) : (
         <FlatList
@@ -159,7 +186,7 @@ export default function TripsScreen() {
           onEndReached={() => void loadMore()}
           onEndReachedThreshold={0.4}
           renderItem={({ item }) => (
-            <RowErrorBoundary fallback="Không hiển thị được chuyến đi này">
+            <RowErrorBoundary fallback={t('trips.rowError')}>
               {item.kind === 'single' ? (
                 <TripCard
                   booking={item.booking}
@@ -215,12 +242,12 @@ export default function TripsScreen() {
             offlineAt ? (
               <View style={styles.offline}>
                 <Banner tone="warning" icon="wifi-off">
-                  Bạn đang ngoại tuyến. Hiển thị dữ liệu lưu lúc {formatDateTime(offlineAt)}.
+                  {t('trips.offline', { time: formatDateTime(offlineAt) })}
                 </Banner>
                 <Pressable accessibilityRole="button" onPress={refresh} style={styles.reconnect}>
                   <Feather name="refresh-cw" size={17} color={theme.primary} />
                   <AppText variant="smallBold" tone="primary">
-                    Thử kết nối lại
+                    {t('trips.reconnect')}
                   </AppText>
                 </Pressable>
               </View>
@@ -242,7 +269,7 @@ export default function TripsScreen() {
                 </AppText>
                 {tab === 'upcoming' ? (
                   <Button
-                    label="Tìm chuyến bay"
+                    label={t('trips.findFlights')}
                     onPress={() => router.push('/search')}
                     style={styles.cta}
                   />
@@ -274,9 +301,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
+    paddingHorizontal: 6,
   },
+  segmentLabel: { flexShrink: 0 },
   count: {
+    flexShrink: 0,
     minWidth: 22,
     height: 22,
     borderRadius: 11,

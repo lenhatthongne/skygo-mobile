@@ -1,9 +1,26 @@
+import i18n from '@/i18n';
+
 export type TripTab = 'upcoming' | 'past' | 'cancelled';
 
 export const TRIP_TABS: { key: TripTab; label: string }[] = [
-  { key: 'upcoming', label: 'Sắp tới' },
-  { key: 'past', label: 'Đã bay' },
-  { key: 'cancelled', label: 'Đã hủy' },
+  {
+    key: 'upcoming',
+    get label() {
+      return i18n.t('trips.tabUpcoming');
+    },
+  },
+  {
+    key: 'past',
+    get label() {
+      return i18n.t('trips.tabPast');
+    },
+  },
+  {
+    key: 'cancelled',
+    get label() {
+      return i18n.t('trips.tabCancelled');
+    },
+  },
 ];
 
 /**
@@ -38,12 +55,42 @@ export function tripsForTab(items: Api.Booking[], tab: TripTab, now: number) {
 type StatusTone = 'warning' | 'danger' | 'success' | 'purple' | 'textMuted';
 
 export const BOOKING_STATUS: Record<Api.BookingStatus, { label: string; tone: StatusTone }> = {
-  PENDING_PAYMENT: { label: 'Chờ thanh toán', tone: 'warning' },
-  PAYMENT_FAILED: { label: 'Thanh toán thất bại', tone: 'danger' },
-  CONFIRMED: { label: 'Đã xác nhận', tone: 'success' },
-  CANCEL_REQUESTED: { label: 'Đang chờ duyệt hủy', tone: 'purple' },
-  CANCELLED: { label: 'Đã hủy', tone: 'danger' },
-  EXPIRED: { label: 'Hết hạn giữ chỗ', tone: 'textMuted' },
+  PENDING_PAYMENT: {
+    get label() {
+      return i18n.t('trips.status.PENDING_PAYMENT');
+    },
+    tone: 'warning',
+  },
+  PAYMENT_FAILED: {
+    get label() {
+      return i18n.t('trips.status.PAYMENT_FAILED');
+    },
+    tone: 'danger',
+  },
+  CONFIRMED: {
+    get label() {
+      return i18n.t('trips.status.CONFIRMED');
+    },
+    tone: 'success',
+  },
+  CANCEL_REQUESTED: {
+    get label() {
+      return i18n.t('trips.status.CANCEL_REQUESTED');
+    },
+    tone: 'purple',
+  },
+  CANCELLED: {
+    get label() {
+      return i18n.t('trips.status.CANCELLED');
+    },
+    tone: 'danger',
+  },
+  EXPIRED: {
+    get label() {
+      return i18n.t('trips.status.EXPIRED');
+    },
+    tone: 'textMuted',
+  },
 };
 
 /** mm:ss */
@@ -108,3 +155,22 @@ export function entriesForTab(items: Api.Booking[], tab: TripTab, now: number) {
 export const isPayable = (booking: Api.Booking, now: number) =>
   (booking.status === 'PENDING_PAYMENT' || booking.status === 'PAYMENT_FAILED') &&
   Date.parse(booking.holdExpiresAt) > now;
+
+/** The server refuses a seat change closer to departure than this. */
+export const SEAT_CHANGE_CLOSES_HOURS = 2;
+
+/**
+ * Whether the booking can change seats now: Business fare, paid or still held, someone who has a
+ * seat of their own, and at least {@link SEAT_CHANGE_CLOSES_HOURS} hours before departure. The server
+ * checks all of it again.
+ */
+export function canChangeSeats(b: Api.Booking, now: number) {
+  if (b.fareClass.classCode !== 'BUSINESS') return false;
+  const paid = b.status === 'CONFIRMED';
+  const held =
+    (b.status === 'PENDING_PAYMENT' || b.status === 'PAYMENT_FAILED') &&
+    Date.parse(b.holdExpiresAt) > now;
+  if (!paid && !held) return false;
+  if (!b.passengers.some((p) => p.type !== 'INF')) return false;
+  return Date.parse(b.flight.departureAt) - now >= SEAT_CHANGE_CLOSES_HOURS * 3600_000;
+}

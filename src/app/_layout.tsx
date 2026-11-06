@@ -6,6 +6,7 @@ import { AppState, useColorScheme, View } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { restoreLanguage } from '@/i18n';
+import { InAppNotificationBanner } from '@/components/notifications/in-app-banner';
 import { SessionExpiredDialog } from '@/components/session/session-expired-dialog';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
 import { useTheme } from '@/hooks/use-theme';
@@ -73,6 +74,8 @@ function RootNavigator() {
         <Stack.Protected guard={signedIn}>
           <Stack.Screen name="(tabs)" options={{ presentation: 'card' }} />
           <Stack.Screen name="(booking)" />
+          <Stack.Screen name="notifications" />
+          <Stack.Screen name="offers" />
           <Stack.Screen name="assistant" options={{ presentation: 'modal' }} />
         </Stack.Protected>
         <Stack.Protected guard={!signedIn}>
@@ -80,6 +83,7 @@ function RootNavigator() {
         </Stack.Protected>
       </Stack>
       <PushNotificationBridge />
+      {signedIn ? <InAppNotificationBanner /> : null}
       <SessionExpiredDialog />
     </>
   );

@@ -5,8 +5,8 @@ Có hai nguồn nhắc, không bao giờ chạy cùng lúc cho một tài khoả
 ## Nhắc cục bộ (mặc định)
 Code: `src/services/flight-reminders.ts`.
 
-- Mỗi đơn `CONFIRMED` chưa bay có hai lời nhắc hẹn trên máy: **24 giờ** và **3 giờ** trước giờ cất cánh. Nhắc cục bộ không cần server push nên vẫn báo khi không có mạng. Mốc chỉ còn dưới 1 phút hoặc đã qua thì không hẹn.
-- Identifier `skygo.reminder.<bookingId>.<24h|3h>`; payload `data` là `{type: "FLIGHT_REMINDER", bookingId}`, chạm thông báo mở đơn (xem `push-notifications.md`).
+- Mỗi đơn `CONFIRMED` chưa bay có ba lời nhắc hẹn trên máy: **24 giờ**, **3 giờ** và **1 giờ** trước giờ cất cánh. Nhắc cục bộ không cần server push nên vẫn báo khi không có mạng. Mốc chỉ còn dưới 1 phút hoặc đã qua thì không hẹn.
+- Identifier `skygo.reminder.<bookingId>.<24h|3h|1h>`; payload `data` là `{type: "FLIGHT_REMINDER", bookingId}`, chạm thông báo mở đơn (xem `push-notifications.md`).
 - `syncFlightReminders(bookings)` chạy khi tải danh sách đơn (`src/hooks/use-bookings.ts`): thêm mốc còn thiếu, xóa mốc của đơn đã hủy hoặc đã bay. Hàm này không tự hỏi quyền và không được làm hỏng màn gọi nó (nuốt lỗi).
 - Công tắc nằm trong Cài đặt (`src/app/(tabs)/account/settings.tsx`), mặc định bật, lưu AsyncStorage. Bật thì hỏi quyền nếu còn hỏi được, không thì mở cài đặt hệ thống. Tắt thì `cancelFlightReminders`.
 - Nội dung qua i18n `reminder.*`. Giờ và ngày theo `Asia/Ho_Chi_Minh` (`formatTime`, `formatDayMonth`).

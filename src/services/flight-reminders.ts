@@ -8,15 +8,31 @@ import { formatDayMonth, formatTime, vnDateOf } from '@/utils/datetime';
 
 /**
  * Local reminders before departure, scheduled on this phone (no server push, so they also work
- * offline). Each paid, upcoming booking gets one reminder a day before and one three hours before.
+ * offline). Each paid, upcoming booking gets a reminder a day, three hours and one hour before.
  */
 const supported = Platform.OS === 'android' || Platform.OS === 'ios';
 const KEY = 'skygo.settings.flight-reminders';
 const PREFIX = 'skygo.reminder.';
 
 const KINDS = [
-  { id: '24h', leadMs: 24 * 3600_000, title: 'reminder.dayTitle', lead: 'reminder.dayLead' },
-  { id: '3h', leadMs: 3 * 3600_000, title: 'reminder.hoursTitle', lead: 'reminder.hoursLead' },
+  {
+    id: '24h',
+    leadMs: 24 * 3600_000,
+    title: 'reminder.dayTitle',
+    lead: 'reminder.dayLead',
+  },
+  {
+    id: '3h',
+    leadMs: 3 * 3600_000,
+    title: 'reminder.hoursTitle',
+    lead: 'reminder.hoursLead',
+  },
+  {
+    id: '1h',
+    leadMs: 3600_000,
+    title: 'reminder.soonTitle',
+    lead: 'reminder.soonLead',
+  },
 ] as const;
 
 const SERVER_CHECK_TTL_MS = 60_000;
@@ -64,7 +80,10 @@ export async function reminderPermission(): Promise<{
   if (!supported) return { status: 'denied', canAskAgain: false };
   const p = await Notifications.getPermissionsAsync();
   if (p.granted) return { status: 'granted', canAskAgain: true };
-  return { status: p.canAskAgain ? 'undetermined' : 'denied', canAskAgain: p.canAskAgain };
+  return {
+    status: p.canAskAgain ? 'undetermined' : 'denied',
+    canAskAgain: p.canAskAgain,
+  };
 }
 
 /** Removes every reminder this app scheduled (sign-out, or the customer turned them off). */
@@ -104,7 +123,11 @@ export async function syncFlightReminders(bookings: Api.Booking[], now = Date.no
       for (const kind of KINDS) {
         const at = departure - kind.leadMs;
         if (at > now + 60_000)
-          wanted.set(`${PREFIX}${booking.id}.${kind.id}`, { at, booking, kind });
+          wanted.set(`${PREFIX}${booking.id}.${kind.id}`, {
+            at,
+            booking,
+            kind,
+          });
       }
     }
 

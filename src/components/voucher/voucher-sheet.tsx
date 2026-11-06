@@ -6,12 +6,13 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View } fro
 import { AppText } from '@/components/ui/app-text';
 import { Banner } from '@/components/ui/banner';
 import { Button } from '@/components/ui/button';
+import { useNow } from '@/hooks/use-now';
 import { useRemoteList } from '@/hooks/use-remote-list';
 import { useTheme } from '@/hooks/use-theme';
 import { listMyVouchers } from '@/services/api/vouchers';
 import { errorMessage } from '@/utils/error-messages';
 import { formatVnd } from '@/utils/money';
-import { estimateDiscount } from '@/utils/vouchers';
+import { estimateDiscount, timeLeft } from '@/utils/vouchers';
 
 import { VoucherCard } from './voucher-card';
 
@@ -26,7 +27,9 @@ type Props = {
   onClose: () => void;
 };
 
-const loadUsable = (signal: AbortSignal) => listMyVouchers(false, signal);
+// Everything the account has, so a voucher that cannot be picked is listed with the reason instead
+// of being missing.
+const loadAll = (signal: AbortSignal) => listMyVouchers(true, signal);
 
 /** Bottom sheet to pick a voucher: tap one to apply it. Nothing to type. */
 export function VoucherSheet(props: Props) {
@@ -37,18 +40,27 @@ export function VoucherSheet(props: Props) {
 function Sheet({ subtotal, currentCode, onSelect, onRemove, onClose }: Props) {
   const theme = useTheme();
   const { t } = useTranslation();
-  const { items, loading, error, reload } = useRemoteList(loadUsable);
+  const { items, loading, error, reload } = useRemoteList(loadAll);
   const [busy, setBusy] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  const now = useNow(true, 1000);
 
-  // Usable ones first, the one saving the most marked as best.
+  // Two groups, like in Account → My vouchers. Valid ones: usable first (saved before unsaved, the
+  // one saving the most marked as best), then those the booking is too small for. A voucher held by
+  // another unpaid booking is still valid: picking it moves it here. Used and expired ones are listed
+  // below, muted, with the reason.
   const rows = (items ?? []).map((v) => ({
     v,
+    locked: v.status === 'USED' || v.status === 'EXPIRED',
     short: v.minOrder > subtotal ? v.minOrder - subtotal : 0,
     saving: estimateDiscount(v, subtotal),
   }));
-  rows.sort((a, b) => Number(a.short > 0) - Number(b.short > 0) || b.saving - a.saving);
-  const best = rows.find((r) => r.short === 0 && r.saving > 0)?.v.code;
+  const rank = (r: (typeof rows)[number]) => Number(r.short > 0) * 2 + Number(!r.v.saved);
+  const valid = rows
+    .filter((r) => !r.locked)
+    .sort((a, b) => rank(a) - rank(b) || b.saving - a.saving);
+  const spent = rows.filter((r) => r.locked);
+  const best = valid.find((r) => r.short === 0 && r.saving > 0)?.v.code;
 
   async function run(key: string, action: () => Promise<void>) {
     setBusy(key);
@@ -94,12 +106,28 @@ function Sheet({ subtotal, currentCode, onSelect, onRemove, onClose }: Props) {
           ) : null}
 
           <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
-            {rows.map(({ v, short, saving }) => (
+            {items && items.length > 0 ? (
+              <AppText variant="caption" tone="textMuted">
+                {t('voucher.oneOnly')}
+              </AppText>
+            ) : null}
+            {valid.length > 0 ? (
+              <AppText variant="caption" tone="textMuted" style={styles.section}>
+                {t('voucher.sectionValid', { count: valid.length })}
+              </AppText>
+            ) : null}
+            {valid.map(({ v, short, saving }) => (
               <View key={v.code} style={styles.item}>
                 <VoucherCard
                   voucher={v}
                   selected={v.code === currentCode}
-                  badge={v.code === best ? t('voucher.best') : undefined}
+                  badge={
+                    v.code === best ? t('voucher.best') : v.saved ? t('voucher.saved') : undefined
+                  }
+                  countdown={v.saved && v.expiresAt ? timeLeft(v.expiresAt, now) : null}
+                  note={
+                    v.status === 'HELD' && v.code !== currentCode ? t('voucher.moveHint') : null
+                  }
                   disabledReason={
                     short > 0 ? t('voucher.needMore', { amount: formatVnd(short) }) : null
                   }
@@ -115,6 +143,20 @@ function Sheet({ subtotal, currentCode, onSelect, onRemove, onClose }: Props) {
                     {t('voucher.saving', { amount: formatVnd(saving) })}
                   </AppText>
                 ) : null}
+              </View>
+            ))}
+            {spent.length > 0 ? (
+              <AppText variant="caption" tone="textMuted" style={styles.section}>
+                {t('voucher.sectionUsed', { count: spent.length })}
+              </AppText>
+            ) : null}
+            {spent.map(({ v }) => (
+              <View key={v.code} style={styles.item}>
+                <VoucherCard
+                  voucher={v}
+                  inactive
+                  disabledReason={v.status === 'EXPIRED' ? t('voucher.expired') : t('voucher.used')}
+                />
               </View>
             ))}
           </ScrollView>
@@ -165,4 +207,5 @@ const styles = StyleSheet.create({
   item: { gap: 2 },
   spin: { position: 'absolute', right: 16, top: 22 },
   save: { paddingLeft: 68 },
+  section: { marginTop: 8, letterSpacing: 0.4, fontWeight: '700' },
 });

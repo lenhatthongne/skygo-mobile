@@ -22,18 +22,22 @@ const PAGES = [
   { key: 'search', icon: 'airplane-takeoff', tint: '#10506A' },
   { key: 'book', icon: 'seat-passenger', tint: '#14405A' },
   { key: 'ticket', icon: 'qrcode-scan', tint: '#0D3550' },
+  { key: 'reminder', icon: 'bell-ring-outline', tint: '#10506A' },
 ] as const;
 
-/** First launch only: three short pages, then the welcome screen. */
+/** First launch only: four short pages. Notifications are switched on in the phone's own settings. */
 export default function OnboardingScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const list = useRef<FlatList<(typeof PAGES)[number]>>(null);
   const [page, setPage] = useState(0);
+  const [busy, setBusy] = useState(false);
   const last = page === PAGES.length - 1;
 
   async function finish() {
+    if (busy) return;
+    setBusy(true);
     await markOnboardingSeen();
     router.replace('/welcome');
   }
@@ -95,7 +99,11 @@ export default function OnboardingScreen() {
       </View>
 
       <View style={styles.footer}>
-        <Button label={last ? t('onboarding.start') : t('onboarding.next')} onPress={next} />
+        <Button
+          label={last ? t('onboarding.start') : t('onboarding.next')}
+          onPress={next}
+          loading={busy}
+        />
       </View>
     </View>
   );

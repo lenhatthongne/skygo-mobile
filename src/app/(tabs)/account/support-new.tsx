@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Feather } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -17,6 +18,7 @@ const SUBJECT_MAX = 150;
 const CONTENT_MAX = 5000;
 
 export default function NewSupportRequestScreen() {
+  const { t } = useTranslation();
   const theme = useTheme();
   // The assistant can hand over a draft; the customer still reviews and sends it.
   const draft = useLocalSearchParams<{ subject?: string; content?: string }>();
@@ -28,8 +30,8 @@ export default function NewSupportRequestScreen() {
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
 
   const errors = {
-    subject: subject.trim() ? undefined : 'Nhập tiêu đề',
-    content: content.trim() ? undefined : 'Nhập nội dung cần hỗ trợ',
+    subject: subject.trim() ? undefined : t('supportNew.subjectError'),
+    content: content.trim() ? undefined : t('supportNew.contentError'),
   };
   const valid = !errors.subject && !errors.content;
 
@@ -53,18 +55,20 @@ export default function NewSupportRequestScreen() {
 
   return (
     <Screen
-      header={{ title: 'Yêu cầu mới', onBack: () => router.back(), close: true }}
-      footer={<Button label="Gửi yêu cầu" loading={sending} onPress={() => void send()} />}>
+      header={{ title: t('supportNew.title'), onBack: () => router.back(), close: true }}
+      footer={
+        <Button label={t('supportNew.send')} loading={sending} onPress={() => void send()} />
+      }>
       <View style={styles.stack}>
         {message ? <Banner tone="error">{message}</Banner> : null}
 
         <View>
           <TextField
-            label="Tiêu đề"
+            label={t('supportNew.subject')}
             value={subject}
             onChangeText={setSubject}
             maxLength={SUBJECT_MAX}
-            placeholder="Ví dụ: Chưa nhận email xác nhận"
+            placeholder={t('supportNew.subjectPlaceholder')}
             error={(attempted && errors.subject) || serverErrors.subject}
           />
           <AppText variant="caption" tone="textMuted" style={styles.count}>
@@ -73,21 +77,24 @@ export default function NewSupportRequestScreen() {
         </View>
 
         <View style={styles.group}>
-          <AppText variant="label">Nội dung</AppText>
+          <AppText variant="label">{t('supportNew.content')}</AppText>
           <TextInput
-            accessibilityLabel="Nội dung"
+            accessibilityLabel={t('supportNew.content')}
             value={content}
             onChangeText={setContent}
             multiline
             maxLength={CONTENT_MAX}
-            placeholder="Mô tả vấn đề của bạn. Nếu liên quan đến một đơn, hãy ghi mã đặt chỗ."
+            placeholder={t('supportNew.contentPlaceholder')}
             placeholderTextColor={theme.textMuted}
             style={[
               styles.area,
               {
                 color: theme.text,
                 backgroundColor: theme.background,
-                borderColor: (attempted && errors.content) || serverErrors.content ? theme.danger : theme.border,
+                borderColor:
+                  (attempted && errors.content) || serverErrors.content
+                    ? theme.danger
+                    : theme.border,
               },
             ]}
           />
@@ -104,7 +111,7 @@ export default function NewSupportRequestScreen() {
         <View style={[styles.note, { backgroundColor: theme.backgroundElement }]}>
           <Feather name="clock" size={20} color={theme.textSecondary} />
           <AppText variant="small" tone="textSecondary" style={styles.flex}>
-            Phản hồi sẽ hiện trong ứng dụng, ở mục Yêu cầu hỗ trợ.
+            {t('supportNew.note')}
           </AppText>
         </View>
       </View>
@@ -116,7 +123,20 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   stack: { gap: 16, paddingTop: 12 },
   group: { gap: 8 },
-  area: { minHeight: 180, borderWidth: 1.5, borderRadius: Radius.lg, padding: 14, fontSize: 15, textAlignVertical: 'top' },
+  area: {
+    minHeight: 180,
+    borderWidth: 1.5,
+    borderRadius: Radius.lg,
+    padding: 14,
+    fontSize: 15,
+    textAlignVertical: 'top',
+  },
   count: { textAlign: 'right', marginTop: 4 },
-  note: { flexDirection: 'row', gap: 12, padding: 14, borderRadius: Radius.md, alignItems: 'center' },
+  note: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 14,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+  },
 });

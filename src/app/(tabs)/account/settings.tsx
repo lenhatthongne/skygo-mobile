@@ -9,6 +9,7 @@ import { ListCard, ListRow, ListSection } from '@/components/ui/list-row';
 import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { Radius } from '@/constants/theme';
+import { loadLanguagePreference, type LanguagePreference, saveLanguagePreference } from '@/i18n';
 import { useTheme } from '@/hooks/use-theme';
 import { setAssistantFabHidden, useAssistantFabHidden } from '@/services/assistant-fab-store';
 import {
@@ -34,11 +35,20 @@ const THEMES: { value: ThemePreference; labelKey: 'themeLight' | 'themeDark' | '
   { value: 'system', labelKey: 'themeSystem' },
 ];
 
+const LANGUAGES: {
+  value: LanguagePreference;
+  labelKey: 'languageSystem' | 'languageVi' | 'languageEn';
+}[] = [
+  { value: 'system', labelKey: 'languageSystem' },
+  { value: 'vi', labelKey: 'languageVi' },
+  { value: 'en', labelKey: 'languageEn' },
+];
 
 export default function SettingsScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
   const [preference, setPreference] = useState<ThemePreference>('system');
+  const [language, setLanguage] = useState<LanguagePreference>('vi');
   const [saved, setSaved] = useState<{ count: number; syncedAt: string | null } | null>(null);
   const [confirming, setConfirming] = useState(false);
   const fabHidden = useAssistantFabHidden();
@@ -83,12 +93,18 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     void loadThemePreference().then(setPreference);
+    void loadLanguagePreference().then(setLanguage);
     void ticketSummary().then(setSaved);
   }, []);
 
   function choose(value: ThemePreference) {
     setPreference(value);
     void saveThemePreference(value);
+  }
+
+  function chooseLanguage(value: LanguagePreference) {
+    setLanguage(value);
+    void saveLanguagePreference(value);
   }
 
   async function clearData() {
@@ -98,6 +114,10 @@ export default function SettingsScreen() {
   }
 
   const themeOptions = THEMES.map((o) => ({ value: o.value, label: t(`settings.${o.labelKey}`) }));
+  const languageOptions = LANGUAGES.map((o) => ({
+    value: o.value,
+    label: t(`settings.${o.labelKey}`),
+  }));
 
   return (
     <Screen header={{ title: t('settings.title'), onBack: () => router.back() }}>
@@ -109,6 +129,13 @@ export default function SettingsScreen() {
             {t('settings.themeTitle')}
           </AppText>
           <Segmented options={themeOptions} value={preference} onChange={choose} />
+          <AppText variant="bodyBold" style={[styles.label, styles.labelGap]}>
+            {t('settings.languageTitle')}
+          </AppText>
+          <Segmented options={languageOptions} value={language} onChange={chooseLanguage} />
+          <AppText variant="caption" tone="textMuted" style={styles.hint}>
+            {t('settings.languageHint')}
+          </AppText>
         </View>
 
         <ListSection title={t('settings.sectionNotifications')} />

@@ -1,5 +1,7 @@
 import type { MaterialCommunityIcons } from '@expo/vector-icons';
 
+import i18n from '@/i18n';
+
 import { formatVnd } from './money';
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
@@ -39,7 +41,10 @@ export function fareHighlights(fare: Api.FareClass): Highlight[] {
     {
       key: 'checked',
       icon: 'bag-suitcase',
-      label: fare.checkedBaggageKg > 0 ? `Ký gửi ${fare.checkedBaggageKg} kg` : 'Không gồm hành lý ký gửi',
+      label:
+        fare.checkedBaggageKg > 0
+          ? `Ký gửi ${fare.checkedBaggageKg} kg`
+          : 'Không gồm hành lý ký gửi',
       included: fare.checkedBaggageKg > 0,
     },
     {
@@ -53,6 +58,12 @@ export function fareHighlights(fare: Api.FareClass): Highlight[] {
       included: fare.refundable,
     },
   ];
+  list.push({
+    key: 'seatChange',
+    icon: 'seat-passenger',
+    label: i18n.t(fare.classCode === 'BUSINESS' ? 'fares.seatChange' : 'fares.noSeatChange'),
+    included: fare.classCode === 'BUSINESS',
+  });
   for (const code of fare.amenities ?? []) {
     const known = AMENITIES[code];
     if (known) list.push({ key: code, icon: known.icon, label: known.label, included: true });

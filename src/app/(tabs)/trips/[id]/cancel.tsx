@@ -1,6 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, StyleSheet, TextInput, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
@@ -16,15 +17,16 @@ import { getBooking, getCancellationQuote, requestCancellation } from '@/service
 import { type ApiError, isApiError, toApiError } from '@/services/api/errors';
 import { formatDayMonth, formatTime, vnDateOf } from '@/utils/datetime';
 import { errorMessage } from '@/utils/error-messages';
-import { FARE_NAMES } from '@/utils/fares';
+import { fareShortName } from '@/utils/fares';
 import { formatVnd } from '@/utils/money';
 
-const REASONS = ['Thay đổi kế hoạch', 'Đặt nhầm', 'Sức khỏe', 'Khác'];
+const REASON_KEYS = ['plan', 'mistake', 'health', 'other'] as const;
 const NOTE_MAX = 500;
 
 type QuoteState = { id: string; quote?: Api.CancellationQuote; error?: ApiError };
 
 export default function CancelScreen() {
+  const { t } = useTranslation();
   const theme = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { booking, loading, error, reload } = useBooking(id);
@@ -49,7 +51,7 @@ export default function CancelScreen() {
     return () => controller.abort();
   }, [id, attempt]);
 
-  const header = { title: 'Yêu cầu hủy vé', onBack: () => router.back() };
+  const header = { title: t('cancel.title'), onBack: () => router.back() };
   const q = quoteState?.id === id ? quoteState : null;
 
   if (loading || (!q && !error)) {
@@ -75,7 +77,7 @@ export default function CancelScreen() {
       <Screen
         footer={
           <Button
-            label="Xem chi tiết đặt chỗ"
+            label={t('ticketScreen.viewBooking')}
             onPress={() => router.replace({ pathname: '/trips/[id]', params: { id: booking.id } })}
           />
         }>
@@ -84,11 +86,10 @@ export default function CancelScreen() {
             <Feather name="check" size={38} color={theme.success} />
           </View>
           <AppText variant="h2" style={styles.center}>
-            Đã gửi yêu cầu hủy
+            {t('cancel.sent')}
           </AppText>
           <AppText tone="textSecondary" style={styles.center}>
-            SkyGo sẽ xem xét yêu cầu. Vé vẫn hợp lệ cho đến khi yêu cầu được duyệt. Bạn có thể theo dõi trạng thái trong
-            mục Chuyến đi.
+            {t('cancel.sentText')}
           </AppText>
         </View>
       </Screen>
@@ -101,12 +102,15 @@ export default function CancelScreen() {
         <View style={styles.errorBox}>
           <Banner tone="error">{errorMessage(q?.error)}</Banner>
           {q?.error?.kind === 'network' || q?.error?.kind === 'timeout' ? (
-            <Button label="Thử lại" onPress={() => {
+            <Button
+              label={t('cancel.retry')}
+              onPress={() => {
                 setQuoteState(null);
                 setAttempt((n) => n + 1);
-              }} />
+              }}
+            />
           ) : (
-            <Button label="Quay lại" variant="outline" onPress={() => router.back()} />
+            <Button label={t('cancel.back')} variant="outline" onPress={() => router.back()} />
           )}
         </View>
       </Screen>
@@ -116,7 +120,10 @@ export default function CancelScreen() {
   const { quote } = q;
   const { flight } = booking;
   const date = vnDateOf(flight.departureAt);
-  const text = (reason ? (note.trim() ? `${reason}: ${note.trim()}` : reason) : note.trim()).slice(0, NOTE_MAX);
+  const text = (reason ? (note.trim() ? `${reason}: ${note.trim()}` : reason) : note.trim()).slice(
+    0,
+    NOTE_MAX,
+  );
 
   async function send() {
     setSending(true);
@@ -133,7 +140,7 @@ export default function CancelScreen() {
         setUnsure(true);
         setMessage({
           tone: 'warning',
-          text: 'Chưa rõ yêu cầu đã được gửi hay chưa vì mất kết nối. Hãy kiểm tra trạng thái trước khi gửi lại.',
+          text: t('cancel.unsure'),
         });
       } else {
         setMessage({ tone: 'error', text: errorMessage(failure) });
@@ -151,10 +158,13 @@ export default function CancelScreen() {
         setSent(true);
       } else {
         setUnsure(false);
-        setMessage({ tone: 'warning', text: 'Yêu cầu chưa được ghi nhận. Bạn có thể gửi lại.' });
+        setMessage({ tone: 'warning', text: t('cancel.notRecorded') });
       }
     } catch (e) {
-      setMessage({ tone: 'error', text: isApiError(e) ? errorMessage(e) : 'Không kiểm tra được trạng thái.' });
+      setMessage({
+        tone: 'error',
+        text: isApiError(e) ? errorMessage(e) : t('cancel.checkFailed'),
+      });
     } finally {
       setSending(false);
     }
@@ -166,75 +176,100 @@ export default function CancelScreen() {
         header={header}
         footer={
           unsure ? (
-            <Button label="Kiểm tra trạng thái" loading={sending} onPress={() => void checkStatus()} />
+            <Button
+              label={t('cancel.checkStatus')}
+              loading={sending}
+              onPress={() => void checkStatus()}
+            />
           ) : (
-            <Button label="Gửi yêu cầu hủy" variant="danger" onPress={() => setConfirming(true)} />
+            <Button label={t('cancel.send')} variant="danger" onPress={() => setConfirming(true)} />
           )
         }>
         <View style={styles.stack}>
-          <View style={[styles.card, styles.summary, { backgroundColor: theme.background, borderColor: theme.border }]}>
+          <View
+            style={[
+              styles.card,
+              styles.summary,
+              { backgroundColor: theme.background, borderColor: theme.border },
+            ]}>
             <View style={styles.flex}>
               <AppText style={styles.route}>
                 {flight.origin} → {flight.destination}
               </AppText>
               <AppText variant="small" tone="textMuted">
-                {formatDayMonth(date)} · {formatTime(flight.departureAt)} · {booking.bookingCode} · {booking.seatCount}{' '}
-                khách
+                {formatDayMonth(date)} · {formatTime(flight.departureAt)} · {booking.bookingCode} ·{' '}
+                {t('common.guests', { count: booking.seatCount })}
               </AppText>
             </View>
             <View style={[styles.tag, { backgroundColor: theme.primarySoft }]}>
               <AppText variant="label" tone="primaryDark">
-                {FARE_NAMES[booking.fareClass.classCode]?.replace('Phổ thông ', '')}
+                {fareShortName(booking.fareClass.classCode)}
               </AppText>
             </View>
           </View>
 
-          <View style={[styles.card, { backgroundColor: theme.background, borderColor: theme.border }]}>
+          <View
+            style={[styles.card, { backgroundColor: theme.background, borderColor: theme.border }]}>
             <AppText variant="bodyBold" style={styles.cardTitle}>
-              Ước tính hoàn tiền
+              {t('cancel.estimate')}
             </AppText>
             <View style={styles.line}>
-              <AppText tone="textSecondary">Đã thanh toán</AppText>
+              <AppText tone="textSecondary">{t('tripDetail.paid')}</AppText>
               <AppText variant="bodyBold">{formatVnd(booking.totalAmount)}</AppText>
             </View>
             <View style={styles.line}>
-              <AppText tone="textSecondary">Phí hủy ({booking.seatCount} khách)</AppText>
+              <AppText tone="textSecondary">
+                {t('cancel.fee', { guests: t('common.guests', { count: booking.seatCount }) })}
+              </AppText>
               <AppText variant="bodyBold" tone="danger">
                 − {formatVnd(quote.cancelFeeTotal)}
               </AppText>
             </View>
             <View style={[styles.divider, { backgroundColor: theme.border }]} />
             <View style={styles.line}>
-              <AppText variant="bodyBold">Hoàn lại dự kiến</AppText>
-              <AppText style={[styles.refund, { color: theme.success }]}>{formatVnd(quote.refundAmount)}</AppText>
+              <AppText variant="bodyBold">{t('cancel.refund')}</AppText>
+              <AppText style={[styles.refund, { color: theme.success }]}>
+                {formatVnd(quote.refundAmount)}
+              </AppText>
             </View>
           </View>
 
-          <Banner tone="info">SkyGo sẽ xem xét yêu cầu. Vé vẫn hợp lệ cho đến khi yêu cầu được duyệt.</Banner>
+          <Banner tone="info">{t('cancel.review')}</Banner>
 
           {message ? <Banner tone={message.tone}>{message.text}</Banner> : null}
 
           <View style={styles.reason}>
             <AppText variant="label">
-              Lý do hủy{' '}
+              {t('cancel.reason')}{' '}
               <AppText variant="small" tone="textMuted">
-                (không bắt buộc)
+                {t('cancel.optional')}
               </AppText>
             </AppText>
             <View style={styles.chips}>
-              {REASONS.map((r) => (
-                <Chip key={r} label={r} selected={reason === r} onPress={() => setReason(reason === r ? null : r)} />
-              ))}
+              {REASON_KEYS.map((key) => {
+                const label = t(`cancel.reasons.${key}`);
+                return (
+                  <Chip
+                    key={key}
+                    label={label}
+                    selected={reason === label}
+                    onPress={() => setReason(reason === label ? null : label)}
+                  />
+                );
+              })}
             </View>
             <TextInput
-              accessibilityLabel="Ghi chú cho SkyGo"
+              accessibilityLabel={t('cancel.noteLabel')}
               value={note}
               onChangeText={setNote}
               multiline
               maxLength={NOTE_MAX}
-              placeholder="Thêm ghi chú cho SkyGo..."
+              placeholder={t('cancel.notePlaceholder')}
               placeholderTextColor={theme.textMuted}
-              style={[styles.note, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
+              style={[
+                styles.note,
+                { color: theme.text, borderColor: theme.border, backgroundColor: theme.background },
+              ]}
             />
             <AppText variant="caption" tone="textMuted" style={styles.count}>
               {note.length}/{NOTE_MAX}
@@ -247,9 +282,9 @@ export default function CancelScreen() {
         visible={confirming}
         destructive
         loading={sending}
-        title="Gửi yêu cầu hủy vé?"
-        message={`Bạn sẽ được hoàn dự kiến ${formatVnd(quote.refundAmount)} sau khi SkyGo duyệt. Yêu cầu đã gửi không thể rút lại.`}
-        confirmLabel="Gửi yêu cầu hủy"
+        title={t('cancel.confirmTitle')}
+        message={t('cancel.confirmMessage', { amount: formatVnd(quote.refundAmount) })}
+        confirmLabel={t('cancel.send')}
         onConfirm={() => void send()}
         onCancel={() => setConfirming(false)}
       />

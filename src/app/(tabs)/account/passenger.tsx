@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Feather } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -22,18 +23,11 @@ import { todayVn } from '@/utils/datetime';
 import { errorMessage, fieldErrors } from '@/utils/error-messages';
 import { isValidApiName, toApiName } from '@/utils/names';
 
-const TITLES: { value: Api.PassengerTitle; label: string }[] = [
-  { value: 'MR', label: 'Ông · MR' },
-  { value: 'MRS', label: 'Bà · MRS' },
-  { value: 'MS', label: 'Cô · MS' },
-  { value: 'MSTR', label: 'Bé trai · MSTR' },
-  { value: 'MISS', label: 'Bé gái · MISS' },
-];
-
-const AGE_HINT = { ADT: 'từ 12 tuổi', CHD: 'từ 2 đến dưới 12 tuổi', INF: 'dưới 2 tuổi', TOO_YOUNG: '' } as const;
+const TITLE_VALUES: Api.PassengerTitle[] = ['MR', 'MRS', 'MS', 'MSTR', 'MISS'];
 
 /** Add (no params) or edit (id + current values) a saved passenger. Presented as a modal. */
 export default function PassengerFormScreen() {
+  const { t } = useTranslation();
   const theme = useTheme();
   const params = useLocalSearchParams<{
     id?: string;
@@ -43,7 +37,9 @@ export default function PassengerFormScreen() {
   }>();
   const editingId = params.id ? Number(params.id) : null;
 
-  const [title, setTitle] = useState<Api.PassengerTitle | null>((params.title as Api.PassengerTitle) ?? null);
+  const [title, setTitle] = useState<Api.PassengerTitle | null>(
+    (params.title as Api.PassengerTitle) ?? null,
+  );
   const [name, setName] = useState(params.fullName ?? '');
   const [dob, setDob] = useState(params.dateOfBirth ? isoToDob(params.dateOfBirth) : '');
   const [attempted, setAttempted] = useState(false);
@@ -57,12 +53,12 @@ export default function PassengerFormScreen() {
   const today = todayVn();
 
   const errors = {
-    title: title ? undefined : 'Chọn danh xưng',
-    name: isValidApiName(apiName) ? undefined : 'Nhập họ và tên (ít nhất 2 chữ cái, tối đa 50)',
+    title: title ? undefined : t('passengerForm.pickTitle'),
+    name: isValidApiName(apiName) ? undefined : t('passengerForm.nameError'),
     dob: !isoDob
-      ? 'Nhập ngày sinh dạng ngày/tháng/năm'
+      ? t('passengerForm.dobFormat')
       : isoDob > today
-        ? 'Ngày sinh không thể ở tương lai'
+        ? t('passengerForm.dobFuture')
         : undefined,
   };
   const valid = !errors.title && !errors.name && !errors.dob;
@@ -84,7 +80,7 @@ export default function PassengerFormScreen() {
       // Everything the user typed stays in the form.
       const remote = fieldErrors(e);
       setServerErrors(remote);
-      setMessage(Object.keys(remote).length > 0 ? 'Vui lòng kiểm tra lại các ô được báo lỗi.' : errorMessage(e));
+      setMessage(Object.keys(remote).length > 0 ? t('passengerForm.checkFields') : errorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -108,16 +104,32 @@ export default function PassengerFormScreen() {
   return (
     <>
       <Screen
-        header={{ title: editingId ? 'Sửa hành khách' : 'Thêm hành khách', onBack: () => router.back(), close: true }}
-        footer={<Button label="Lưu hành khách" loading={saving} disabled={attempted && !valid} onPress={() => void save()} />}>
+        header={{
+          title: editingId ? t('passengerForm.edit') : t('passengerForm.add'),
+          onBack: () => router.back(),
+          close: true,
+        }}
+        footer={
+          <Button
+            label={t('passengerForm.save')}
+            loading={saving}
+            disabled={attempted && !valid}
+            onPress={() => void save()}
+          />
+        }>
         <View style={styles.stack}>
           {message ? <Banner tone="error">{message}</Banner> : null}
 
           <View style={styles.group}>
-            <AppText variant="label">Danh xưng</AppText>
+            <AppText variant="label">{t('passengerForm.titleLabel')}</AppText>
             <View style={styles.chips}>
-              {TITLES.map((t) => (
-                <Chip key={t.value} label={t.label} selected={title === t.value} onPress={() => setTitle(t.value)} />
+              {TITLE_VALUES.map((value) => (
+                <Chip
+                  key={value}
+                  label={t(`passengerForm.titles.${value}`)}
+                  selected={title === value}
+                  onPress={() => setTitle(value)}
+                />
               ))}
             </View>
             {show.title ? (
@@ -128,20 +140,24 @@ export default function PassengerFormScreen() {
           </View>
 
           <TextField
-            label="Họ và tên"
+            label={t('passengerForm.fullName')}
             value={name}
             onChangeText={setName}
             autoCapitalize="words"
             autoCorrect={false}
             maxLength={50}
-            placeholder="Nguyễn Văn An"
+            placeholder={t('passengerForm.namePlaceholder')}
             error={show.name ?? serverErrors.fullName}
-            hint={apiName && apiName !== name ? `Tên trên vé: ${apiName}` : undefined}
+            hint={
+              apiName && apiName !== name
+                ? t('passengerForm.ticketName', { name: apiName })
+                : undefined
+            }
           />
 
           <View>
             <TextField
-              label="Ngày sinh"
+              label={t('passengerForm.dob')}
               leftIcon="calendar"
               value={dob}
               onChangeText={(v) => setDob(formatDobInput(v))}
@@ -153,7 +169,7 @@ export default function PassengerFormScreen() {
             {ageClass ? (
               <AppText variant="caption" tone="textMuted" style={styles.age}>
                 {AGE_LABEL[ageClass]}
-                {AGE_HINT[ageClass] ? ` (${AGE_HINT[ageClass]})` : ''}
+                {ageClass !== 'TOO_YOUNG' ? ` (${t(`passengerForm.age.${ageClass}`)})` : ''}
               </AppText>
             ) : null}
           </View>
@@ -161,7 +177,7 @@ export default function PassengerFormScreen() {
           <View style={[styles.privacy, { backgroundColor: theme.backgroundElement }]}>
             <Feather name="shield" size={20} color={theme.textSecondary} />
             <AppText variant="small" tone="textSecondary" style={styles.flex}>
-              Thông tin chỉ dùng để điền vé cho bạn và không được chia sẻ.
+              {t('passengerForm.privacy')}
             </AppText>
           </View>
 
@@ -171,7 +187,7 @@ export default function PassengerFormScreen() {
               onPress={() => setConfirmDelete(true)}
               style={styles.delete}>
               <AppText variant="bodyBold" tone="danger">
-                Xóa hành khách
+                {t('passengerForm.delete')}
               </AppText>
             </Pressable>
           ) : null}
@@ -182,9 +198,9 @@ export default function PassengerFormScreen() {
         visible={confirmDelete}
         destructive
         loading={saving}
-        title="Xóa hành khách?"
-        message={`${title ?? ''} ${apiName} sẽ bị xóa khỏi danh sách đã lưu. Các đơn đã đặt không bị ảnh hưởng.`}
-        confirmLabel="Xóa"
+        title={t('passengerForm.deleteTitle')}
+        message={t('passengerForm.deleteMessage', { name: `${title ?? ''} ${apiName}` })}
+        confirmLabel={t('passengerForm.deleteConfirm')}
         onConfirm={() => void remove()}
         onCancel={() => setConfirmDelete(false)}
       />
@@ -198,6 +214,12 @@ const styles = StyleSheet.create({
   group: { gap: 10 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   age: { marginTop: 6, marginLeft: 4 },
-  privacy: { flexDirection: 'row', gap: 12, padding: 14, borderRadius: Radius.md, alignItems: 'center' },
+  privacy: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 14,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+  },
   delete: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
 });

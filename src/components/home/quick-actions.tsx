@@ -9,7 +9,7 @@ import { Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 type Action = {
-  labelKey: 'tickets' | 'passengers' | 'support' | 'assistant';
+  labelKey: 'tickets' | 'passengers' | 'offers' | 'support' | 'assistant';
   icon: keyof typeof Feather.glyphMap | 'assistant';
   href: Href;
 };
@@ -17,6 +17,7 @@ type Action = {
 const ACTIONS: Action[] = [
   { labelKey: 'tickets', icon: 'file-text', href: '/trips' },
   { labelKey: 'passengers', icon: 'users', href: '/account/passengers' },
+  { labelKey: 'offers', icon: 'gift', href: '/offers' },
   { labelKey: 'support', icon: 'headphones', href: '/account/support' },
   { labelKey: 'assistant', icon: 'assistant', href: '/assistant' },
 ];
@@ -41,7 +42,7 @@ export function QuickActions() {
               <Feather name={a.icon} size={22} color={theme.primaryDark} />
             )}
           </View>
-          <AppText variant="caption" tone="textSecondary" numberOfLines={1}>
+          <AppText variant="caption" tone="textSecondary" numberOfLines={2} style={styles.label}>
             {t(`home.quick.${a.labelKey}`)}
           </AppText>
         </Pressable>
@@ -52,10 +53,11 @@ export function QuickActions() {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 },
-  item: { flex: 1, alignItems: 'center', gap: 6, minHeight: 44 },
+  item: { flex: 1, alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 2 },
+  label: { textAlign: 'center', fontSize: 11.5, lineHeight: 15 },
   icon: {
-    width: 52,
-    height: 52,
+    width: 48,
+    height: 48,
     borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',

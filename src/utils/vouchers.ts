@@ -29,3 +29,17 @@ export function estimateDiscount(v: Api.Voucher, subtotal: number) {
   const capped = v.maxDiscount ? Math.min(raw, v.maxDiscount) : raw;
   return Math.max(0, Math.min(capped, subtotal));
 }
+
+/**
+ * Time left until `expiresAt`, counting down: "6 ngày 23:59:10", or "05:12:09" under a day;
+ * null once it has passed. Pass the current time so a screen can tick it.
+ */
+export function timeLeft(expiresAt: string, now: number) {
+  const ms = Date.parse(expiresAt) - now;
+  if (!(ms > 0)) return null;
+  const total = Math.floor(ms / 1000);
+  const days = Math.floor(total / 86400);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const clock = `${pad(Math.floor((total % 86400) / 3600))}:${pad(Math.floor((total % 3600) / 60))}:${pad(total % 60)}`;
+  return days > 0 ? `${i18n.t('voucher.days', { count: days })} ${clock}` : clock;
+}

@@ -66,7 +66,10 @@ async function doRegister(ask: boolean): Promise<PushSetup> {
   }
 
   try {
-    await registerPushDevice({ expoToken: token, platform: Platform.OS === 'ios' ? 'IOS' : 'ANDROID' });
+    await registerPushDevice({
+      expoToken: token,
+      platform: Platform.OS === 'ios' ? 'IOS' : 'ANDROID',
+    });
   } catch {
     return 'error';
   }
@@ -85,6 +88,15 @@ export function registerForPush(options: { ask: boolean }) {
       current = null;
     });
   return current;
+}
+
+/** True when this phone has a push token registered, i.e. the server's own push will reach it. */
+export async function hasPushDevice() {
+  try {
+    return (await SecureStore.getItemAsync(TOKEN_KEY)) !== null;
+  } catch {
+    return false;
+  }
 }
 
 /** Tells the server this phone no longer belongs to the signed-in account. Call BEFORE logout. */

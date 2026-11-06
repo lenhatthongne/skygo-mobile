@@ -170,7 +170,8 @@ export default function PassengersScreen() {
   const draftKey = `${params.flightId}:${fareClassId}:${params.returnFlightId ?? ''}:${returnFareClassId || ''}:${party.adults}/${party.children}/${party.infants}`;
   const draft = loadDraft<Slot>(draftKey);
   const [slots, setSlots] = useState<Slot[]>(
-    () => draft?.slots ?? withProfile(buildSlots(party.adults, party.children, party.infants), user),
+    () =>
+      draft?.slots ?? withProfile(buildSlots(party.adults, party.children, party.infants), user),
   );
   const [email, setEmail] = useState(draft?.email ?? user?.email ?? '');
   const [phone, setPhone] = useState(() => draft?.phone ?? prefillNationalPhone(user?.phone ?? ''));
@@ -183,12 +184,13 @@ export default function PassengersScreen() {
     baggageWeightsKg: slots.flatMap((s) => (bagOf(s, leg) ? [bagOf(s, leg) as number] : [])),
     seatCodes: slots.flatMap((s) => (seatOf(s, leg) ? [seatOf(s, leg) as string] : [])),
   });
-  const quotes = useFareQuotes(fare ? [fare] : [], { ...party, ...extrasFor('OUTBOUND') });
+  const quotes = useFareQuotes(fare ? [fare] : [], { ...party, ...extrasFor('OUTBOUND') }, true);
   const quote = fare ? quotes.quotes[fare.id] : undefined;
-  const returnQuotes = useFareQuotes(returnFare ? [returnFare] : [], {
-    ...party,
-    ...extrasFor('RETURN'),
-  });
+  const returnQuotes = useFareQuotes(
+    returnFare ? [returnFare] : [],
+    { ...party, ...extrasFor('RETURN') },
+    true,
+  );
   const returnQuote = returnFare ? returnQuotes.quotes[returnFare.id] : undefined;
 
   const [saved, setSaved] = useState<Api.SavedPassenger[]>([]);
@@ -527,7 +529,11 @@ export default function PassengersScreen() {
             </AppText>
             <AppText variant="h2">{total !== null ? formatVnd(total) : '—'}</AppText>
             {isRound && outboundTotal !== null && returnTotal !== null ? (
-              <AppText variant="caption" tone="textMuted">
+              <AppText
+                variant="caption"
+                tone="textMuted"
+                numberOfLines={2}
+                style={styles.footerNote}>
                 Đi {formatVnd(outboundTotal)}
                 {quote?.baggageTotal || quote?.seatTotal
                   ? ` (gồm ${formatVnd((quote.baggageTotal ?? 0) + (quote.seatTotal ?? 0))} hành lý, ghế)`
@@ -538,24 +544,24 @@ export default function PassengersScreen() {
                   : ''}
               </AppText>
             ) : (
-              <>
-                {quote?.baggageTotal ? (
-                  <AppText variant="caption" tone="textMuted">
-                    Gồm hành lý {formatVnd(quote.baggageTotal)}
-                  </AppText>
-                ) : null}
-                {quote?.seatTotal ? (
-                  <AppText variant="caption" tone="textMuted">
-                    Gồm phí ghế {formatVnd(quote.seatTotal)}
-                  </AppText>
-                ) : null}
-              </>
+              // One line that is always there, so choosing baggage or a seat never changes the
+              // height of the footer (and with it the room the form above has).
+              <AppText variant="caption" tone="textMuted" numberOfLines={1}>
+                {quote?.baggageTotal || quote?.seatTotal
+                  ? `Gồm ${[
+                      quote.baggageTotal ? `hành lý ${formatVnd(quote.baggageTotal)}` : '',
+                      quote.seatTotal ? `ghế ${formatVnd(quote.seatTotal)}` : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}`
+                  : 'Chưa gồm hành lý, ghế'}
+              </AppText>
             )}
           </View>
           <Button
             label={step === 2 ? 'Giữ chỗ & tiếp tục' : 'Tiếp tục'}
             loading={submitting}
-            disabled={step === 2 && total === null}
+            disabled={step === 2 && (total === null || quotes.loading || returnQuotes.loading)}
             style={styles.cta}
             onPress={onNext}
           />
@@ -896,6 +902,7 @@ const styles = StyleSheet.create({
   label: { marginTop: 16, marginBottom: 8 },
   err: { marginTop: 6 },
   footer: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  footerNote: { minHeight: 36 },
   cta: { width: 190 },
   scrim: { flex: 1, backgroundColor: 'rgba(14,17,22,0.5)', justifyContent: 'flex-end' },
   sheet: { borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: 20, paddingBottom: 32 },

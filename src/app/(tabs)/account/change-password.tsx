@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -14,6 +15,7 @@ import { errorMessage } from '@/utils/error-messages';
 import { isValidPassword, passwordChecks } from '@/utils/validators';
 
 export default function ChangePasswordScreen() {
+  const { t } = useTranslation();
   const { signIn } = useSession();
   const newRef = useRef<TextInputHandle>(null);
   const confirmRef = useRef<TextInputHandle>(null);
@@ -49,12 +51,10 @@ export default function ChangePasswordScreen() {
   if (done) {
     return (
       <Screen
-        header={{ title: 'Đổi mật khẩu', onBack: () => router.back() }}
-        footer={<Button label="Xong" onPress={() => router.back()} />}>
+        header={{ title: t('changePassword.title'), onBack: () => router.back() }}
+        footer={<Button label={t('changePassword.done')} onPress={() => router.back()} />}>
         <View style={styles.stack}>
-          <Banner tone="success">
-            Đã đổi mật khẩu. Các thiết bị khác sẽ cần đăng nhập lại bằng mật khẩu mới.
-          </Banner>
+          <Banner tone="success">{t('changePassword.changed')}</Banner>
         </View>
       </Screen>
     );
@@ -62,12 +62,19 @@ export default function ChangePasswordScreen() {
 
   return (
     <Screen
-      header={{ title: 'Đổi mật khẩu', onBack: () => router.back() }}
-      footer={<Button label="Đổi mật khẩu" onPress={() => void save()} loading={saving} disabled={!canSave} />}>
+      header={{ title: t('changePassword.title'), onBack: () => router.back() }}
+      footer={
+        <Button
+          label={t('changePassword.title')}
+          onPress={() => void save()}
+          loading={saving}
+          disabled={!canSave}
+        />
+      }>
       <View style={styles.stack}>
         {error ? <Banner tone="error">{error}</Banner> : null}
         <PasswordField
-          label="Mật khẩu hiện tại"
+          label={t('changePassword.current')}
           value={current}
           onChangeText={(v) => {
             setCurrent(v);
@@ -78,27 +85,27 @@ export default function ChangePasswordScreen() {
         />
         <PasswordField
           ref={newRef}
-          label="Mật khẩu mới"
+          label={t('changePassword.new')}
           value={password}
           onChangeText={setPassword}
           autoComplete="new-password"
           returnKeyType="next"
           onSubmitEditing={() => confirmRef.current?.focus()}
-          error={same ? 'Mật khẩu mới phải khác mật khẩu hiện tại' : null}
+          error={same ? t('changePassword.same') : null}
         />
         <PasswordRules checks={checks} />
         <PasswordField
           ref={confirmRef}
-          label="Nhập lại mật khẩu mới"
+          label={t('changePassword.confirm')}
           value={confirm}
           onChangeText={setConfirm}
           autoComplete="new-password"
           returnKeyType="go"
           onSubmitEditing={() => void save()}
-          error={mismatch ? 'Mật khẩu nhập lại chưa khớp' : null}
+          error={mismatch ? t('changePassword.mismatch') : null}
         />
         <AppText variant="caption" tone="textMuted">
-          Sau khi đổi, các thiết bị khác đang đăng nhập sẽ bị đăng xuất.
+          {t('changePassword.note')}
         </AppText>
       </View>
     </Screen>

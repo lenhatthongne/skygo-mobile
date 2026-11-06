@@ -1,81 +1,96 @@
+import i18n from '@/i18n';
 import { isApiError } from '@/services/api/errors';
 
 function waitText(seconds?: number) {
-  if (!seconds) return 'một lúc';
-  return seconds >= 60 ? `${Math.ceil(seconds / 60)} phút` : `${seconds} giây`;
+  if (!seconds) return i18n.t('errors.awhile');
+  return seconds >= 60
+    ? i18n.t('errors.minutes', { count: Math.ceil(seconds / 60) })
+    : i18n.t('errors.seconds', { count: seconds });
 }
 
-/** Vietnamese message for an error, chosen by HTTP status and `code`, never by server text. */
-export function errorMessage(error: unknown, fallback = 'Có lỗi xảy ra, vui lòng thử lại.') {
+/** Message for an error in the language chosen in Settings, chosen by HTTP status and `code`, never by server text. */
+export function errorMessage(error: unknown, fallback = i18n.t('errors.fallback')) {
   if (!isApiError(error)) return fallback;
   switch (error.kind) {
     case 'network':
-      return 'Không thể kết nối tới máy chủ. Hãy kiểm tra mạng rồi thử lại.';
+      return i18n.t('errors.network');
     case 'timeout':
-      return 'Máy chủ đang khởi động hoặc phản hồi chậm (có thể mất khoảng 1 phút). Vui lòng thử lại sau giây lát.';
+      return i18n.t('errors.timeout');
     case 'canceled':
       return '';
   }
   switch (error.code) {
     case 'INVALID_CREDENTIALS':
-      return 'Email hoặc mật khẩu không đúng.';
+      return i18n.t('errors.invalidCredentials');
     case 'ACCOUNT_LOCKED':
-      return 'Tài khoản tạm khóa do nhập sai nhiều lần. Vui lòng thử lại sau ít phút.';
+      return i18n.t('errors.accountLocked');
     case 'ACCOUNT_BLOCKED':
-      return 'Tài khoản đã bị khóa. Vui lòng liên hệ hỗ trợ.';
+      return i18n.t('errors.accountBlocked');
     case 'EMAIL_EXISTS':
-      return 'Email này đã được đăng ký.';
+      return i18n.t('errors.emailExists');
     case 'OTP_INVALID':
-      return 'Mã không đúng hoặc đã được sử dụng.';
+      return i18n.t('errors.codeInvalid');
     case 'OTP_EXPIRED':
-      return 'Mã đã hết hạn. Hãy gửi lại mã mới.';
+      return i18n.t('errors.codeExpired');
     case 'OTP_RATE_LIMITED':
-      return `Bạn thao tác quá nhanh. Vui lòng thử lại sau ${waitText(error.retryAfterSeconds)}.`;
+      return i18n.t('errors.tooFast', { wait: waitText(error.retryAfterSeconds) });
     case 'EMAIL_DELIVERY_FAILED':
-      return 'Không gửi được email xác thực. Vui lòng thử lại sau.';
+      return i18n.t('errors.mailFailed');
     case 'VALIDATION_ERROR':
-      return 'Dữ liệu chưa hợp lệ. Vui lòng kiểm tra lại các ô nhập.';
+      return i18n.t('errors.validation');
     case 'SOLD_OUT':
-      return 'Hạng vé này không còn đủ chỗ cho nhóm của bạn. Vui lòng chọn hạng vé hoặc chuyến khác.';
+      return i18n.t('errors.soldOut');
     case 'FLIGHT_UNAVAILABLE':
-      return 'Chuyến bay này không còn mở bán. Vui lòng chọn chuyến khác.';
+      return i18n.t('errors.flightClosed');
     case 'INVALID_PASSENGER':
-      return 'Hành khách phải từ 14 ngày tuổi tại ngày bay. Vui lòng kiểm tra lại ngày sinh.';
+      return i18n.t('errors.tooYoung');
     case 'HOLD_EXPIRED':
-      return 'Đã hết thời gian giữ chỗ cho đơn này.';
+      return i18n.t('errors.holdExpired');
     case 'IDEMPOTENCY_CONFLICT':
-      return 'Yêu cầu thanh toán bị trùng. Vui lòng thử lại.';
+      return i18n.t('errors.idempotency');
     case 'INVALID_STATE':
-      return 'Đơn này không còn ở trạng thái có thể thanh toán.';
+      return i18n.t('errors.invalidState');
     case 'ASSISTANT_RATE_LIMITED':
-      return `Bạn nhắn hơi nhanh. Vui lòng thử lại sau ${waitText(error.retryAfterSeconds)}.`;
+      return i18n.t('errors.chatTooFast', { wait: waitText(error.retryAfterSeconds) });
     case 'ASSISTANT_UNAVAILABLE':
-      return 'Trợ lý hiện chưa sẵn sàng. Bạn có thể xem Câu hỏi thường gặp hoặc gửi yêu cầu hỗ trợ.';
+      return i18n.t('errors.assistant');
     case 'INVALID_ROUND_TRIP':
-      return 'Hai chặng chưa khớp: chuyến về phải đi ngược hành trình và khởi hành ít nhất 2 giờ sau khi chuyến đi hạ cánh.';
+      return i18n.t('errors.roundTrip');
     case 'INVALID_IMAGE':
-      return 'Chỉ nhận ảnh JPG, PNG hoặc WebP. Vui lòng chọn ảnh khác.';
+      return i18n.t('errors.imageType');
     case 'FILE_TOO_LARGE':
-      return 'Ảnh quá lớn (tối đa 2 MB). Hãy chọn ảnh khác.';
+      return i18n.t('errors.imageSize');
     case 'STORAGE_ERROR':
-      return 'Chưa lưu được ảnh. Vui lòng thử lại sau.';
+      return i18n.t('errors.imageFailed');
     case 'SEAT_TAKEN':
-      return 'Ghế bạn chọn vừa có người đặt. Vui lòng chọn ghế khác.';
+      return i18n.t('errors.seatTaken');
+    case 'VOUCHER_INVALID':
+      return i18n.t('errors.voucherInvalid');
+    case 'VOUCHER_EXPIRED':
+      return i18n.t('errors.voucherExpired');
+    case 'VOUCHER_USED':
+      return i18n.t('errors.voucherUsed');
+    case 'VOUCHER_MIN_ORDER':
+      return i18n.t('errors.voucherMinOrder');
     case 'INVALID_SEAT':
-      return 'Ghế đã chọn không hợp lệ cho hạng vé này. Vui lòng chọn lại.';
+      return i18n.t('errors.seatInvalid');
+    case 'SEAT_CHANGE_NOT_ALLOWED':
+      return i18n.t('errors.seatChangeNotAllowed');
+    case 'SEAT_CHANGE_CLOSED':
+      return i18n.t('errors.seatChangeClosed');
     case 'INVALID_BAGGAGE':
-      return 'Gói hành lý đã chọn không còn áp dụng cho hạng vé này. Vui lòng chọn lại.';
+      return i18n.t('errors.baggageInvalid');
     case 'CURRENT_PASSWORD_INCORRECT':
-      return 'Mật khẩu hiện tại không đúng.';
+      return i18n.t('errors.wrongPassword');
     case 'CANCELLATION_NOT_ALLOWED':
-      return 'Đơn này không thể hủy. Hạng vé phải cho phép hoàn hủy và còn ít nhất 24 giờ trước giờ bay.';
+      return i18n.t('errors.cannotCancel');
     case 'NOT_FOUND':
-      return 'Không tìm thấy dữ liệu này. Có thể nó đã bị xóa.';
+      return i18n.t('errors.notFound');
     case 'REFRESH_TOKEN_INVALID':
     case 'UNAUTHORIZED':
-      return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+      return i18n.t('errors.sessionExpired');
   }
-  if (error.status && error.status >= 500) return 'Máy chủ đang gặp sự cố. Vui lòng thử lại sau.';
+  if (error.status && error.status >= 500) return i18n.t('errors.server');
   return fallback;
 }
 

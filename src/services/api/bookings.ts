@@ -42,15 +42,20 @@ export async function getTicket(id: string, signal?: AbortSignal) {
 }
 
 export async function getCancellationQuote(id: string, signal?: AbortSignal) {
-  const { data } = await api.get<Api.CancellationQuote>(`/bookings/${id}/cancellation-quote`, { signal });
+  const { data } = await api.get<Api.CancellationQuote>(`/bookings/${id}/cancellation-quote`, {
+    signal,
+  });
   return data;
 }
 
 /** Not retried automatically: after a timeout, re-read the booking to learn whether it went through. */
 export async function requestCancellation(id: string, reason: string | null) {
-  const { data } = await api.post<Api.CancellationRequestResult>(`/bookings/${id}/cancellation-requests`, {
-    reason,
-  });
+  const { data } = await api.post<Api.CancellationRequestResult>(
+    `/bookings/${id}/cancellation-requests`,
+    {
+      reason,
+    },
+  );
   return data;
 }
 
@@ -62,5 +67,11 @@ export async function setBookingVoucher(id: string, code: string) {
 
 export async function removeBookingVoucher(id: string) {
   const { data } = await api.delete<Api.Booking>(`/bookings/${id}/voucher`);
+  return data;
+}
+
+/** Business fare only: new seats for some passengers of a booking (free, until 2 hours before departure). */
+export async function changeSeats(id: string, body: Api.ChangeSeatsRequest) {
+  const { data } = await api.put<Api.Booking>(`/bookings/${id}/seats`, body);
   return data;
 }

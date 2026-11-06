@@ -9,10 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
 import { Screen } from '@/components/ui/screen';
 import { VoucherCard } from '@/components/voucher/voucher-card';
+import { useNow } from '@/hooks/use-now';
 import { useRemoteList } from '@/hooks/use-remote-list';
 import { useTheme } from '@/hooks/use-theme';
 import { listMyVouchers } from '@/services/api/vouchers';
 import { errorMessage } from '@/utils/error-messages';
+import { timeLeft } from '@/utils/vouchers';
 
 const loadAll = (signal: AbortSignal) => listMyVouchers(true, signal);
 
@@ -23,9 +25,15 @@ export default function VouchersScreen() {
   const { t } = useTranslation();
   const { items, loading, error, reload, refresh, refreshing } = useRemoteList(loadAll);
   const [tab, setTab] = useState<Tab>('usable');
-
-  const usable = (items ?? []).filter((v) => v.status === 'AVAILABLE');
-  const history = (items ?? []).filter((v) => v.status !== 'AVAILABLE');
+  // Only vouchers that belong to the account: granted ones and the ones saved from Home.
+  const mine = (items ?? []).filter((v) => v.saved);
+  // A voucher held by an unpaid booking is still valid: it is spent when that booking is paid.
+  const usable = mine.filter((v) => v.status === 'AVAILABLE' || v.status === 'HELD');
+  const history = mine.filter((v) => v.status === 'USED' || v.status === 'EXPIRED');
+  const now = useNow(
+    usable.some((v) => v.expiresAt),
+    1000,
+  );
   const shown = tab === 'usable' ? usable : history;
 
   return (
@@ -61,7 +69,13 @@ export default function VouchersScreen() {
             <VoucherCard
               key={v.code}
               voucher={v}
-              inactive={v.status !== 'AVAILABLE'}
+              inactive={v.status === 'USED' || v.status === 'EXPIRED'}
+              countdown={
+                (v.status === 'AVAILABLE' || v.status === 'HELD') && v.expiresAt
+                  ? timeLeft(v.expiresAt, now)
+                  : null
+              }
+              note={v.status === 'HELD' ? t('voucher.held') : null}
               disabledReason={
                 v.status === 'USED'
                   ? t('voucher.used')

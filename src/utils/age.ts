@@ -1,12 +1,22 @@
+import i18n from '@/i18n';
 import { addDays, parseIsoDate, toIsoDate } from './datetime';
 
 export type AgeClass = 'ADT' | 'CHD' | 'INF' | 'TOO_YOUNG';
 
+/** Read when used, so the labels follow the language chosen in Settings. */
 export const AGE_LABEL: Record<AgeClass, string> = {
-  ADT: 'Người lớn',
-  CHD: 'Trẻ em',
-  INF: 'Em bé',
-  TOO_YOUNG: 'Dưới 14 ngày tuổi',
+  get ADT() {
+    return i18n.t('passengerType.ADT');
+  },
+  get CHD() {
+    return i18n.t('passengerType.CHD');
+  },
+  get INF() {
+    return i18n.t('passengerType.INF');
+  },
+  get TOO_YOUNG() {
+    return i18n.t('passengerForm.tooYoung');
+  },
 };
 
 function addYears(isoDate: string, years: number) {
@@ -33,7 +43,8 @@ export function parseDob(text: string) {
   const m = Number(match[2]);
   const y = Number(match[3]);
   const date = new Date(Date.UTC(y, m - 1, d));
-  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return null;
+  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d)
+    return null;
   return toIsoDate(y, m, d);
 }
 

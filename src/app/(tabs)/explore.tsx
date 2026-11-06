@@ -1,6 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Linking,
@@ -30,12 +31,15 @@ const loadAirports = (_signal: AbortSignal) => getAirports();
 
 function directionsUrl(a: Api.Airport) {
   const { latitude: lat, longitude: lng } = a;
-  if (Platform.OS === 'ios') return `http://maps.apple.com/?daddr=${lat},${lng}&q=${encodeURIComponent(a.name)}`;
-  if (Platform.OS === 'android') return `geo:${lat},${lng}?q=${lat},${lng}(${encodeURIComponent(a.name)})`;
+  if (Platform.OS === 'ios')
+    return `http://maps.apple.com/?daddr=${lat},${lng}&q=${encodeURIComponent(a.name)}`;
+  if (Platform.OS === 'android')
+    return `geo:${lat},${lng}?q=${lat},${lng}(${encodeURIComponent(a.name)})`;
   return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
 }
 
 export default function ExploreScreen() {
+  const { t } = useTranslation();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { items, loading, error, reload } = useRemoteList(loadAirports);
@@ -46,8 +50,15 @@ export default function ExploreScreen() {
   const q = fold(query.trim());
   const rows = (items ?? [])
     .map((a) => ({ airport: a, km: location.coords ? distanceKm(location.coords, a) : null }))
-    .filter(({ airport: a }) => !q || fold(a.name).includes(q) || fold(a.city).includes(q) || fold(a.code).includes(q))
-    .sort((a, b) => (a.km !== null && b.km !== null ? a.km - b.km : a.airport.city.localeCompare(b.airport.city, 'vi')));
+    .filter(
+      ({ airport: a }) =>
+        !q || fold(a.name).includes(q) || fold(a.city).includes(q) || fold(a.code).includes(q),
+    )
+    .sort((a, b) =>
+      a.km !== null && b.km !== null
+        ? a.km - b.km
+        : a.airport.city.localeCompare(b.airport.city, 'vi'),
+    );
   const nearest = location.coords ? rows[0]?.airport.code : undefined;
 
   const locating = location.state === 'locating';
@@ -55,49 +66,68 @@ export default function ExploreScreen() {
   return (
     <View style={[styles.root, { backgroundColor: theme.backgroundElement }]}>
       <View style={styles.map}>
-        <AirportsMap airports={items ?? []} selectedCode={selected} user={location.coords} onSelect={setSelected} />
+        <AirportsMap
+          airports={items ?? []}
+          selectedCode={selected}
+          user={location.coords}
+          onSelect={setSelected}
+        />
         <View style={[styles.top, { paddingTop: insets.top + 8 }]}>
           <View style={[styles.search, { backgroundColor: theme.background }]}>
             <Feather name="search" size={20} color={theme.textMuted} />
             <TextInput
-              accessibilityLabel="Tìm sân bay"
+              accessibilityLabel={t('explore.searchLabel')}
               value={query}
               onChangeText={setQuery}
-              placeholder="Tìm sân bay, thành phố"
+              placeholder={t('explore.searchPlaceholder')}
               placeholderTextColor={theme.textMuted}
               style={[styles.input, { color: theme.text }]}
             />
           </View>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Dùng vị trí hiện tại"
+            accessibilityLabel={t('explore.useLocation')}
             disabled={locating}
             onPress={() => void location.locate()}
             style={[styles.locate, { backgroundColor: theme.background }]}>
             {locating ? (
               <ActivityIndicator color={theme.primary} />
             ) : (
-              <Feather name="crosshair" size={22} color={location.coords ? theme.primary : theme.textSecondary} />
+              <Feather
+                name="crosshair"
+                size={22}
+                color={location.coords ? theme.primary : theme.textSecondary}
+              />
             )}
           </Pressable>
         </View>
       </View>
 
-      <View style={[styles.sheet, { backgroundColor: theme.background, paddingBottom: insets.bottom + BottomTabInset }]}>
+      {/* Android's tab bar sits below this screen, so no extra bottom room is needed there (adding it
+          shrank the list and cut the last rows). iOS draws the screen under its floating tab bar. */}
+      <View
+        style={[
+          styles.sheet,
+          {
+            backgroundColor: theme.background,
+            paddingBottom: Platform.OS === 'android' ? 8 : insets.bottom + BottomTabInset,
+          },
+        ]}>
         <View style={styles.sheetHead}>
-          <AppText variant="h2">{location.coords ? 'Sân bay gần bạn' : 'Sân bay SkyGo'}</AppText>
+          <AppText variant="h2">
+            {location.coords ? t('explore.nearYou') : t('explore.allAirports')}
+          </AppText>
           <AppText variant="small" tone="textMuted">
-            {location.coords ? 'Theo vị trí hiện tại' : `${items?.length ?? 0} sân bay`}
+            {location.coords
+              ? t('explore.byLocation')
+              : t('explore.airportCount', { count: items?.length ?? 0 })}
           </AppText>
         </View>
 
         {location.state === 'denied' ? (
-          <Banner tone="info">
-            Bạn chưa cho phép dùng vị trí nên chưa có gợi ý sân bay gần nhất. Bạn vẫn xem và chọn sân bay như bình
-            thường.
-          </Banner>
+          <Banner tone="info">{t('explore.permissionDenied')}</Banner>
         ) : location.state === 'unavailable' ? (
-          <Banner tone="warning">Chưa xác định được vị trí. Hãy bật định vị rồi thử lại.</Banner>
+          <Banner tone="warning">{t('explore.locationFailed')}</Banner>
         ) : null}
 
         {loading ? (
@@ -105,11 +135,11 @@ export default function ExploreScreen() {
         ) : error ? (
           <View style={styles.errorBox}>
             <Banner tone="error">{errorMessage(error)}</Banner>
-            <Button label="Thử lại" onPress={reload} />
+            <Button label={t('explore.retry')} onPress={reload} />
           </View>
         ) : rows.length === 0 ? (
           <AppText tone="textSecondary" style={styles.empty}>
-            Không tìm thấy sân bay phù hợp.
+            {t('explore.none')}
           </AppText>
         ) : (
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.list}>
@@ -120,7 +150,11 @@ export default function ExploreScreen() {
                   key={a.code}
                   style={[
                     styles.row,
-                    open && { borderColor: theme.primary, backgroundColor: theme.background, borderWidth: 1.5 },
+                    open && {
+                      borderColor: theme.primary,
+                      backgroundColor: theme.background,
+                      borderWidth: 1.5,
+                    },
                   ]}>
                   <Pressable
                     accessibilityRole="button"
@@ -142,25 +176,33 @@ export default function ExploreScreen() {
                     {a.code === nearest ? (
                       <View style={[styles.tag, { backgroundColor: theme.primarySoft }]}>
                         <AppText variant="label" tone="primaryDark">
-                          Gần nhất
+                          {t('explore.nearest')}
                         </AppText>
                       </View>
                     ) : (
-                      <Feather name={open ? 'chevron-up' : 'chevron-right'} size={20} color={theme.textMuted} />
+                      <Feather
+                        name={open ? 'chevron-up' : 'chevron-right'}
+                        size={20}
+                        color={theme.textMuted}
+                      />
                     )}
                   </Pressable>
                   {open ? (
                     <View style={styles.actions}>
                       <Button
-                        label="Chỉ đường"
+                        label={t('explore.directions')}
                         variant="outline"
                         style={styles.action}
-                        onPress={() => void Linking.openURL(directionsUrl(a)).catch(() => undefined)}
+                        onPress={() =>
+                          void Linking.openURL(directionsUrl(a)).catch(() => undefined)
+                        }
                       />
                       <Button
-                        label="Bay từ đây"
+                        label={t('explore.flyFrom')}
                         style={styles.action}
-                        onPress={() => router.push({ pathname: '/search', params: { from: a.code } })}
+                        onPress={() =>
+                          router.push({ pathname: '/search', params: { from: a.code } })
+                        }
                       />
                     </View>
                   ) : null}
@@ -179,10 +221,31 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   map: { flex: 1, minHeight: 200 },
   top: { flexDirection: 'row', gap: 12, paddingHorizontal: 16 },
-  search: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, height: 52, borderRadius: Radius.lg, paddingHorizontal: 16 },
+  search: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    height: 52,
+    borderRadius: Radius.lg,
+    paddingHorizontal: 16,
+  },
   input: { flex: 1, fontSize: 15, height: 52 },
-  locate: { width: 52, height: 52, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center' },
-  sheet: { maxHeight: '55%', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 16, paddingHorizontal: 16, gap: 10 },
+  locate: {
+    width: 52,
+    height: 52,
+    borderRadius: Radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheet: {
+    maxHeight: '55%',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingTop: 16,
+    paddingHorizontal: 16,
+    gap: 10,
+  },
   sheetHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   loader: { marginVertical: 30 },
   errorBox: { gap: 12 },
@@ -190,7 +253,13 @@ const styles = StyleSheet.create({
   list: { gap: 8, paddingBottom: 8 },
   row: { borderRadius: Radius.xl, borderWidth: 1.5, borderColor: 'transparent', padding: 8 },
   rowTop: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 56 },
-  icon: { width: 48, height: 48, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  icon: {
+    width: 48,
+    height: 48,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   tag: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.pill },
   actions: { flexDirection: 'row', gap: 10, paddingTop: 10 },
   action: { flex: 1, height: 48 },

@@ -66,11 +66,11 @@ export async function saveLanguagePreference(preference: LanguagePreference) {
 }
 
 /**
- * Applies the language at app start. Only Vietnamese for now: most screens are not translated yet,
- * so an English choice left the app half English. A saved English choice is ignored and the picker
- * is hidden in Settings; `en.ts` stays for when every screen uses `t()`.
+ * Whether the customer can choose the language (Settings). The default stays Vietnamese: screens
+ * that do not use `t()` yet always show Vietnamese, so choosing English leaves those screens in
+ * Vietnamese until they are translated.
  */
-export const LANGUAGE_CHOICE_ENABLED = false;
+export const LANGUAGE_CHOICE_ENABLED = true;
 
 export async function restoreLanguage() {
   const preference = LANGUAGE_CHOICE_ENABLED ? await loadLanguagePreference() : 'vi';

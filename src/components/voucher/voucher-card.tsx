@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { Radius } from '@/constants/theme';
+import i18n from '@/i18n';
 import { useTheme } from '@/hooks/use-theme';
 import { voucherConditions, voucherSummary } from '@/utils/vouchers';
 
@@ -16,6 +17,10 @@ type Props = {
   badge?: string;
   /** Greyed out (used or expired). */
   inactive?: boolean;
+  /** A line of information in the warning colour that does not mute the card. */
+  note?: string | null;
+  /** Time left, already formatted ("6 ngày 23:59:10"); shown under the conditions. */
+  countdown?: string | null;
   onPress?: () => void;
 };
 
@@ -26,6 +31,8 @@ export function VoucherCard({
   disabledReason,
   badge,
   inactive = false,
+  countdown = null,
+  note = null,
   onPress,
 }: Props) {
   const theme = useTheme();
@@ -71,6 +78,16 @@ export function VoucherCard({
         <AppText variant="caption" tone="textMuted">
           {voucherConditions(voucher) || voucherSummary(voucher)}
         </AppText>
+        {countdown ? (
+          <AppText variant="caption" tone="success">
+            {i18n.t('voucher.timeLeft', { time: countdown })}
+          </AppText>
+        ) : null}
+        {note ? (
+          <AppText variant="caption" tone="warning">
+            {note}
+          </AppText>
+        ) : null}
         {disabledReason ? (
           <AppText variant="caption" tone="warning">
             {disabledReason}

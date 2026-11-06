@@ -2,6 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { AirlineBadge } from '@/components/flight/airline-badge';
@@ -19,16 +20,17 @@ import { formatDuration, formatLongDate, formatTime, vnDateOf } from '@/utils/da
 import { errorMessage } from '@/utils/error-messages';
 import { fareName } from '@/utils/fares';
 import { formatVnd } from '@/utils/money';
-import { BOOKING_STATUS } from '@/utils/trips';
-
-const TYPE_LABEL: Record<Api.PassengerType, string> = { ADT: 'Người lớn', CHD: 'Trẻ em', INF: 'Em bé' };
+import { BOOKING_STATUS, canChangeSeats } from '@/utils/trips';
 
 const initials = (fullName: string) => {
   const parts = fullName.trim().split(/\s+/);
-  return (parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : parts[0].slice(0, 2)).toUpperCase();
+  return (
+    parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : parts[0].slice(0, 2)
+  ).toUpperCase();
 };
 
 export default function BookingDetailScreen() {
+  const { t } = useTranslation();
   const theme = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { booking, loading, error, reload, refresh, refreshing } = useBooking(id);
@@ -38,7 +40,7 @@ export default function BookingDetailScreen() {
   // Coming back from paying or cancelling: refresh the status shown here.
   useRefreshOnFocus(reload);
 
-  const header = { title: 'Chi tiết đặt chỗ', onBack: () => router.back() };
+  const header = { title: t('tripDetail.title'), onBack: () => router.back() };
 
   if (loading) {
     return (
@@ -52,7 +54,7 @@ export default function BookingDetailScreen() {
       <Screen header={header}>
         <View style={styles.errorBox}>
           <Banner tone="error">{errorMessage(error)}</Banner>
-          <Button label="Thử lại" onPress={reload} />
+          <Button label={t('tripDetail.retry')} onPress={reload} />
         </View>
       </Screen>
     );
@@ -73,6 +75,7 @@ export default function BookingDetailScreen() {
   const holdOpen = Date.parse(booking.holdExpiresAt) > now;
   const hoursLeft = (Date.parse(flight.departureAt) - now) / 3600000;
   const canCancel = booking.status === 'CONFIRMED' && fareClass.refundable && hoursLeft >= 24;
+  const canSwap = canChangeSeats(booking, now);
 
   async function copyCode() {
     if (!booking?.bookingCode) return;
@@ -84,45 +87,67 @@ export default function BookingDetailScreen() {
   const footer = hasTicket ? (
     <>
       <Button
-        label="Xem vé điện tử"
-        onPress={() => router.push({ pathname: '/trips/[id]/ticket', params: { id: booking.id } })}
+        label={t('tripDetail.viewTicket')}
+        onPress={() =>
+          router.push({
+            pathname: '/trips/[id]/ticket',
+            params: { id: booking.id },
+          })
+        }
       />
       {canCancel ? (
         <Pressable
           accessibilityRole="button"
-          onPress={() => router.push({ pathname: '/trips/[id]/cancel', params: { id: booking.id } })}
+          onPress={() =>
+            router.push({
+              pathname: '/trips/[id]/cancel',
+              params: { id: booking.id },
+            })
+          }
           style={styles.cancel}>
           <AppText variant="bodyBold" tone="danger">
-            Yêu cầu hủy vé
+            {t('tripDetail.cancelRequest')}
           </AppText>
         </Pressable>
       ) : null}
     </>
   ) : unpaid && holdOpen ? (
     <Button
-      label={booking.status === 'PAYMENT_FAILED' ? 'Thanh toán lại' : 'Thanh toán'}
-      onPress={() => router.push({ pathname: '/booking/payment', params: { bookingId: booking.id } })}
+      label={booking.status === 'PAYMENT_FAILED' ? t('tripDetail.payAgain') : t('tripDetail.pay')}
+      onPress={() =>
+        router.push({
+          pathname: '/booking/payment',
+          params: { bookingId: booking.id },
+        })
+      }
     />
   ) : undefined;
 
   return (
     <Screen header={header} footer={footer} refresh={{ refreshing, onRefresh: refresh }}>
       <View style={styles.stack}>
-        <View style={[styles.card, { backgroundColor: theme.background, borderColor: theme.border }]}>
+        <View
+          style={[styles.card, { backgroundColor: theme.background, borderColor: theme.border }]}>
           <View style={styles.codeRow}>
             <View style={styles.flex}>
               <AppText variant="small" tone="textMuted">
-                Mã đặt chỗ
+                {t('tripDetail.bookingCode')}
               </AppText>
               <View style={styles.codeLine}>
-                <AppText style={styles.code}>{booking.bookingCode ?? 'Chưa có mã'}</AppText>
+                <AppText style={styles.code}>
+                  {booking.bookingCode ?? t('tripDetail.noCode')}
+                </AppText>
                 {booking.bookingCode ? (
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="Sao chép mã đặt chỗ"
+                    accessibilityLabel={t('tripDetail.copyCode')}
                     hitSlop={10}
                     onPress={() => void copyCode()}>
-                    <Feather name={copied ? 'check' : 'copy'} size={20} color={copied ? theme.success : theme.textMuted} />
+                    <Feather
+                      name={copied ? 'check' : 'copy'}
+                      size={20}
+                      color={copied ? theme.success : theme.textMuted}
+                    />
                   </Pressable>
                 ) : null}
               </View>
@@ -162,7 +187,7 @@ export default function BookingDetailScreen() {
               </AppText>
               <View style={[styles.line, { borderColor: theme.border }]} />
               <AppText variant="caption" tone="textMuted">
-                Bay thẳng
+                {t('tripDetail.direct')}
               </AppText>
             </View>
             <View style={styles.right}>
@@ -174,19 +199,31 @@ export default function BookingDetailScreen() {
           </View>
         </View>
 
-        <View style={[styles.card, { backgroundColor: theme.background, borderColor: theme.border }]}>
+        <View
+          style={[styles.card, { backgroundColor: theme.background, borderColor: theme.border }]}>
           <AppText variant="bodyBold" style={styles.benefitsTitle}>
-            Quyền lợi hạng {fareName(fareClass)}
+            {t('tripDetail.benefits', { name: fareName(fareClass) })}
           </AppText>
           <FareHighlights fare={fareClass} />
         </View>
 
-        <View style={[styles.card, styles.list, { backgroundColor: theme.background, borderColor: theme.border }]}>
+        <View
+          style={[
+            styles.card,
+            styles.list,
+            { backgroundColor: theme.background, borderColor: theme.border },
+          ]}>
           {booking.passengers.map((p, i) => (
             <View key={p.id}>
               {i > 0 ? <View style={[styles.rule, { backgroundColor: theme.border }]} /> : null}
               <View style={styles.passenger}>
-                <View style={[styles.avatar, { backgroundColor: i % 2 ? theme.warningSoft : theme.primarySoft }]}>
+                <View
+                  style={[
+                    styles.avatar,
+                    {
+                      backgroundColor: i % 2 ? theme.warningSoft : theme.primarySoft,
+                    },
+                  ]}>
                   <AppText variant="bodyBold" tone={i % 2 ? 'warning' : 'primaryDark'}>
                     {initials(p.fullName)}
                   </AppText>
@@ -196,9 +233,9 @@ export default function BookingDetailScreen() {
                     {p.title} {p.fullName}
                   </AppText>
                   <AppText variant="small" tone="textMuted">
-                    {TYPE_LABEL[p.type]}
-                    {p.baggageKg ? ` · +${p.baggageKg} kg hành lý` : ''}
-                    {p.seatCode ? ` · ghế ${p.seatCode}` : ''}
+                    {t(`passengerType.${p.type}`)}
+                    {p.baggageKg ? t('tripDetail.baggage', { kg: p.baggageKg }) : ''}
+                    {p.seatCode ? t('tripDetail.seat', { code: p.seatCode }) : ''}
                   </AppText>
                 </View>
               </View>
@@ -207,44 +244,80 @@ export default function BookingDetailScreen() {
         </View>
 
         {booking.status === 'PENDING_PAYMENT' && holdOpen ? (
-          <Banner tone="warning">Đơn đang được giữ chỗ. Hãy thanh toán trước khi hết hạn giữ chỗ.</Banner>
+          <Banner tone="warning">{t('tripDetail.holding')}</Banner>
         ) : unpaid || booking.status === 'EXPIRED' ? (
-          !holdOpen ? <Banner tone="info">Đơn đã hết hạn giữ chỗ. Bạn có thể tìm và đặt lại chuyến bay.</Banner> : null
+          !holdOpen ? (
+            <Banner tone="info">{t('tripDetail.holdExpired')}</Banner>
+          ) : null
         ) : booking.status === 'CONFIRMED' && !canCancel ? (
           <Banner tone="info">
             {!fareClass.refundable
-              ? 'Hạng vé này không được hủy hoặc hoàn tiền.'
-              : 'Đã quá hạn hủy: chỉ hủy được trước giờ bay ít nhất 24 giờ.'}
+              ? t('tripDetail.notRefundable')
+              : t('tripDetail.cancelWindowPassed')}
           </Banner>
         ) : booking.status === 'CANCEL_REQUESTED' ? (
-          <Banner tone="info">Yêu cầu hủy đang chờ duyệt. Vé vẫn hợp lệ trong thời gian này.</Banner>
+          <Banner tone="info">{t('tripDetail.cancelPending')}</Banner>
         ) : booking.status === 'CANCELLED' ? (
-          <Banner tone="error">Đơn đã hủy và mã QR đã bị thu hồi.</Banner>
+          <Banner tone="error">{t('tripDetail.cancelled')}</Banner>
         ) : null}
 
         {booking.passengers.some((p) => p.type !== 'INF') ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Xem thông tin ghế"
-            onPress={() => router.push({ pathname: '/trips/seats', params: { ids: booking.id } })}
+            accessibilityLabel={t('tripDetail.seatInfoLabel')}
+            onPress={() =>
+              router.push({
+                pathname: '/trips/seats',
+                params: { ids: booking.id },
+              })
+            }
             style={styles.seatLink}>
             <AppText variant="smallBold" tone="primary">
-              Thông tin ghế
+              {t('tripDetail.seatInfo')}
             </AppText>
           </Pressable>
         ) : null}
 
+        {canSwap ? (
+          <View
+            style={[
+              styles.swap,
+              { backgroundColor: theme.primarySoft, borderColor: theme.primary },
+            ]}>
+            <View style={styles.flex}>
+              <AppText variant="bodyBold">{t('seatChange.title')}</AppText>
+              <AppText variant="caption" tone="textSecondary">
+                {t('seatChange.perk')}
+              </AppText>
+            </View>
+            <Button
+              size="sm"
+              icon="swap-horizontal"
+              label={t('seatChange.button')}
+              onPress={() =>
+                router.push({ pathname: '/trips/[id]/change-seat', params: { id: booking.id } })
+              }
+            />
+          </View>
+        ) : null}
+
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Xem chi tiết giá"
-          onPress={() => router.push({ pathname: '/trips/[id]/price', params: { id: booking.id } })}
+          accessibilityLabel={t('tripDetail.priceLabel')}
+          onPress={() =>
+            router.push({
+              pathname: '/trips/[id]/price',
+              params: { id: booking.id },
+            })
+          }
           style={styles.total}>
           <View style={styles.flex}>
             <AppText tone="textSecondary">
-              {hasTicket ? 'Đã thanh toán' : 'Tổng tiền'} · {booking.seatCount} khách
+              {hasTicket ? t('tripDetail.paid') : t('tripDetail.total')} ·{' '}
+              {t('common.guests', { count: booking.seatCount })}
             </AppText>
             <AppText variant="small" tone="primary">
-              Chi tiết giá
+              {t('tripDetail.priceDetail')}
             </AppText>
           </View>
           <AppText style={styles.totalAmount}>{formatVnd(booking.totalAmount)}</AppText>
@@ -255,6 +328,14 @@ export default function BookingDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  swap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+  },
   flex: { flex: 1 },
   loader: { marginTop: 80 },
   errorBox: { gap: 16, paddingTop: 16 },
@@ -276,16 +357,50 @@ const styles = StyleSheet.create({
   divider: { height: 1, marginVertical: 16 },
   airline: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   times: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 18 },
-  time: { fontSize: 30, lineHeight: 36, fontWeight: '800', letterSpacing: -0.5 },
+  time: {
+    fontSize: 30,
+    lineHeight: 36,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
   middle: { flex: 1, alignItems: 'center', gap: 4 },
   line: { width: '100%', borderTopWidth: 1.5, borderStyle: 'dashed' },
   right: { alignItems: 'flex-end' },
-  info: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12, paddingHorizontal: 4 },
-  infoIcon: { width: 44, height: 44, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  info: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  infoIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   rule: { height: 1 },
-  passenger: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12, paddingHorizontal: 4 },
-  avatar: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
-  total: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 4, paddingTop: 4 },
+  passenger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  avatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  total: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    paddingTop: 4,
+  },
   cancel: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   benefitsTitle: { marginBottom: 10 },
   seatLink: { minHeight: 36, justifyContent: 'center', paddingHorizontal: 4 },

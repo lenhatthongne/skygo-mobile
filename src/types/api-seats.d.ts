@@ -9,6 +9,8 @@ declare namespace Api {
     /** Seat fee in VND. */
     price: number;
     available: boolean;
+    /** Taken only by an unpaid booking whose hold is still open (up to 15 minutes); `available` is false too. */
+    held?: boolean;
   }
 
   interface SeatRow {
@@ -25,5 +27,9 @@ declare namespace Api {
   interface SeatMap {
     flightId: number;
     cabins: SeatCabin[];
+  }
+
+  interface ChangeSeatsRequest {
+    seats: { passengerId: number; seatCode: string }[];
   }
 }

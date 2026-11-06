@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AirlineBadge } from '@/components/flight/airline-badge';
@@ -20,11 +21,20 @@ type TripGroupCardProps = {
   onSeats: (legs: Api.Booking[]) => void;
 };
 
-const LEG_LABEL: Record<Api.TripLeg, string> = { OUTBOUND: 'Chặng đi', RETURN: 'Chặng về' };
-
 /** One card for the two linked bookings of a round trip; each leg keeps its own actions. */
-export function TripGroupCard({ legs, now, offline = false, onOpen, onPay, onTicket, onSeats }: TripGroupCardProps) {
+export function TripGroupCard({
+  legs,
+  now,
+  offline = false,
+  onOpen,
+  onPay,
+  onTicket,
+  onSeats,
+}: TripGroupCardProps) {
   const theme = useTheme();
+  const { t } = useTranslation();
+  const legLabel = (leg: Api.TripLeg | null | undefined) =>
+    leg === 'OUTBOUND' ? t('trips.legOut') : leg === 'RETURN' ? t('trips.legBack') : t('trips.leg');
   const first = legs[0];
   const last = legs[legs.length - 1];
   const total = legs.reduce((sum, l) => sum + l.totalAmount, 0);
@@ -38,11 +48,14 @@ export function TripGroupCard({ legs, now, offline = false, onOpen, onPay, onTic
       <View style={styles.top}>
         <View style={[styles.pill, { backgroundColor: theme.primarySoft }]}>
           <AppText variant="label" tone="primaryDark">
-            Khứ hồi
+            {t('trips.roundTrip')}
           </AppText>
         </View>
         <AppText variant="small" tone="textMuted">
-          {legs.map((l) => l.bookingCode).filter(Boolean).join(' · ')}
+          {legs
+            .map((l) => l.bookingCode)
+            .filter(Boolean)
+            .join(' · ')}
         </AppText>
       </View>
 
@@ -53,7 +66,8 @@ export function TripGroupCard({ legs, now, offline = false, onOpen, onPay, onTic
           </AppText>
           <AppText variant="small" tone="textMuted">
             {formatDayMonth(vnDateOf(first.flight.departureAt))}
-            {complete ? ` – ${formatDayMonth(vnDateOf(last.flight.departureAt))}` : ''} · {first.seatCount} khách
+            {complete ? ` – ${formatDayMonth(vnDateOf(last.flight.departureAt))}` : ''} ·{' '}
+            {t('common.guests', { count: first.seatCount })}
           </AppText>
         </View>
         <AppText style={styles.price}>{formatVnd(total)}</AppText>
@@ -66,20 +80,22 @@ export function TripGroupCard({ legs, now, offline = false, onOpen, onPay, onTic
           const canPay = !offline && isPayable(leg, now);
           const canTicket = leg.status === 'CONFIRMED' && Date.parse(leg.flight.departureAt) > now;
           return (
-            <View key={leg.id} style={[styles.leg, i > 0 && { borderTopColor: theme.border, borderTopWidth: 1 }]}>
+            <View
+              key={leg.id}
+              style={[styles.leg, i > 0 && { borderTopColor: theme.border, borderTopWidth: 1 }]}>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`${leg.leg ? LEG_LABEL[leg.leg] : 'Chặng'} ${leg.flight.origin} đến ${leg.flight.destination}, ${status.label}`}
+                accessibilityLabel={`${legLabel(leg.leg)} ${leg.flight.origin} → ${leg.flight.destination}, ${status.label}`}
                 onPress={() => onOpen(leg)}
                 style={({ pressed }) => [styles.legInfo, { opacity: pressed ? 0.85 : 1 }]}>
                 <AirlineBadge airline={leg.flight.airline} size={36} />
                 <View style={styles.flex}>
                   <AppText variant="smallBold">
-                    {leg.leg ? LEG_LABEL[leg.leg] : 'Chặng'} · {leg.flight.origin} → {leg.flight.destination}
+                    {legLabel(leg.leg)} · {leg.flight.origin} → {leg.flight.destination}
                   </AppText>
                   <AppText variant="caption" tone="textMuted">
-                    {formatDayMonth(vnDateOf(leg.flight.departureAt))} · {formatTime(leg.flight.departureAt)} ·{' '}
-                    {leg.flight.flightNumber}
+                    {formatDayMonth(vnDateOf(leg.flight.departureAt))} ·{' '}
+                    {formatTime(leg.flight.departureAt)} · {leg.flight.flightNumber}
                   </AppText>
                   <View style={styles.statusRow}>
                     <View style={[styles.dot, { backgroundColor: toneColor }]} />
@@ -91,12 +107,23 @@ export function TripGroupCard({ legs, now, offline = false, onOpen, onPay, onTic
               </Pressable>
               {canPay ? (
                 <Button
-                  label={leg.status === 'PAYMENT_FAILED' ? 'Thử lại' : 'Thanh toán'}
+                  label={
+                    leg.status === 'PAYMENT_FAILED'
+                      ? t('trips.card.retryShort')
+                      : t('trips.card.pay')
+                  }
+                  size="sm"
                   onPress={() => onPay(leg)}
                   style={styles.action}
                 />
               ) : canTicket ? (
-                <Button label="Xem vé" variant="outline" onPress={() => onTicket(leg)} style={styles.action} />
+                <Button
+                  label={t('trips.card.viewTicket')}
+                  variant="outline"
+                  size="sm"
+                  onPress={() => onTicket(leg)}
+                  style={styles.action}
+                />
               ) : null}
             </View>
           );
@@ -105,20 +132,28 @@ export function TripGroupCard({ legs, now, offline = false, onOpen, onPay, onTic
 
       {paid.length > 0 && payable.length > 0 ? (
         <AppText variant="small" tone="warning" style={styles.note}>
-          {paid.map((l) => (l.leg ? LEG_LABEL[l.leg] : 'Chặng')).join(', ')} đã thanh toán. Còn{' '}
-          {payable.map((l) => (l.leg ? LEG_LABEL[l.leg].toLowerCase() : 'chặng')).join(', ')} chờ thanh toán, giữ chỗ
-          còn {clock(Math.max(0, Math.ceil((Date.parse(payable[0].holdExpiresAt) - now) / 1000)))}.
+          {t('trips.card.groupNote', {
+            paid: paid.map((l) => legLabel(l.leg)).join(', '),
+            payable: payable.map((l) => legLabel(l.leg).toLowerCase()).join(', '),
+            time: clock(
+              Math.max(0, Math.ceil((Date.parse(payable[0].holdExpiresAt) - now) / 1000)),
+            ),
+          })}
         </AppText>
       ) : null}
       {!complete ? (
         <AppText variant="caption" tone="textMuted" style={styles.note}>
-          Chặng còn lại đang ở trang sau của danh sách, kéo xuống để tải thêm.
+          {t('trips.card.moreOnNextPage')}
         </AppText>
       ) : null}
       {hasSeats ? (
-        <Pressable accessibilityRole="button" hitSlop={8} onPress={() => onSeats(legs)} style={styles.seats}>
+        <Pressable
+          accessibilityRole="button"
+          hitSlop={8}
+          onPress={() => onSeats(legs)}
+          style={styles.seats}>
           <AppText variant="smallBold" tone="primary">
-            Thông tin ghế
+            {t('trips.card.seatInfo')}
           </AppText>
         </Pressable>
       ) : null}
@@ -139,7 +174,7 @@ const styles = StyleSheet.create({
   legInfo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
   dot: { width: 7, height: 7, borderRadius: 4 },
-  action: { height: 44 },
+  action: { minWidth: 124 },
   note: { paddingHorizontal: 2 },
   seats: { minHeight: 36, justifyContent: 'center' },
 });

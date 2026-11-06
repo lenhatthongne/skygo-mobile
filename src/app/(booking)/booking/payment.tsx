@@ -18,6 +18,8 @@ import { useNow } from '@/hooks/use-now';
 import { useTheme } from '@/hooks/use-theme';
 import { payBooking, removeBookingVoucher, setBookingVoucher } from '@/services/api/bookings';
 import { isApiError } from '@/services/api/errors';
+import { useSession } from '@/providers/session-provider';
+import { notifyBookingConfirmed } from '@/services/booking-notifications';
 import { registerForPush } from '@/services/push/push-notifications';
 import { formatDuration, formatLongDate, formatTime, vnDateOf } from '@/utils/datetime';
 import { errorMessage } from '@/utils/error-messages';
@@ -62,18 +64,22 @@ export default function PaymentScreen() {
     afterOutbound?: string;
   }>();
   const { booking, loading, error, reload } = useBooking(bookingId);
+  const { user } = useSession();
   const now = useNow();
   const [method, setMethod] = useState<Api.PaymentMethod>('SIMULATED_CARD');
   const [outcome, setOutcome] = useState<Api.SimulatedResult>('SUCCESS');
   const [paying, setPaying] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
-  const [message, setMessage] = useState<{ tone: 'info' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{
+    tone: 'info' | 'error';
+    text: string;
+  } | null>(null);
   const [voucherOpen, setVoucherOpen] = useState(false);
 
-  // Ask for notification permission here, in context, before paying: the "booking confirmed" push
-  // can only reach a device registered by then. Declining never blocks the payment.
+  // The app never asks for notification permission itself (the customer turns it on in the phone's
+  // settings). Retry device registration silently here in case it was unavailable at sign-in.
   useEffect(() => {
-    void registerForPush({ ask: true });
+    void registerForPush({ ask: false });
   }, []);
 
   const header = { title: 'Thanh toán', onBack: () => router.back(), steps: 4 };
@@ -110,7 +116,10 @@ export default function PaymentScreen() {
   const snap = booking.priceSnapshot;
 
   async function pay(resume?: Pending) {
-    const payload: Api.PaymentRequest = resume?.payload ?? { method, simulatedResult: outcome };
+    const payload: Api.PaymentRequest = resume?.payload ?? {
+      method,
+      simulatedResult: outcome,
+    };
     // A new key per deliberate attempt; the same key and body when resuming after a timeout.
     const key = resume?.key ?? newIdempotencyKey();
     setPaying(true);
@@ -118,6 +127,9 @@ export default function PaymentScreen() {
     try {
       const result = await payBooking(bookingId, key, payload);
       setPending(null);
+      if (result.bookingStatus === 'CONFIRMED' && booking && user) {
+        void notifyBookingConfirmed(booking, user.id);
+      }
       if (result.bookingStatus === 'PENDING_PAYMENT') {
         // The payment was cancelled; the reservation is kept.
         setMessage({
@@ -457,7 +469,10 @@ export default function PaymentScreen() {
         <View
           style={[
             styles.card,
-            { borderColor: theme.border, backgroundColor: theme.backgroundElement },
+            {
+              borderColor: theme.border,
+              backgroundColor: theme.backgroundElement,
+            },
           ]}>
           <AppText variant="smallBold">Kết quả mô phỏng (chỉ để thử nghiệm)</AppText>
           <AppText variant="caption" tone="textMuted" style={styles.hint}>
@@ -551,14 +566,24 @@ const styles = StyleSheet.create({
   gapSmall: { marginTop: 8 },
   center: { alignItems: 'center', gap: 12, marginTop: 40, marginBottom: 24 },
   centerText: { textAlign: 'center' },
-  card: { borderWidth: 1, borderRadius: Radius.lg, padding: 16, marginTop: 16, gap: 6 },
+  card: {
+    borderWidth: 1,
+    borderRadius: Radius.lg,
+    padding: 16,
+    marginTop: 16,
+    gap: 6,
+  },
   rowBetween: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 2,
   },
-  pill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.pill },
+  pill: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: Radius.pill,
+  },
   bold: { fontWeight: '700' },
   divider: { height: 1, marginVertical: 8 },
   voucherRow: {
@@ -574,7 +599,12 @@ const styles = StyleSheet.create({
   },
   airline: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   times: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10 },
-  time: { fontSize: 26, lineHeight: 32, fontWeight: '800', letterSpacing: -0.4 },
+  time: {
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+  },
   middle: { flex: 1, alignItems: 'center', gap: 4 },
   line: { width: '100%', borderTopWidth: 1.5, borderStyle: 'dashed' },
   right: { alignItems: 'flex-end' },
@@ -596,10 +626,21 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   methods: { flexDirection: 'row', gap: 8, marginTop: 10 },
-  method: { flex: 1, borderRadius: Radius.md, paddingVertical: 14, alignItems: 'center', gap: 6 },
+  method: {
+    flex: 1,
+    borderRadius: Radius.md,
+    paddingVertical: 14,
+    alignItems: 'center',
+    gap: 6,
+  },
   hint: { marginTop: 2, marginBottom: 8 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  step: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
+  step: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 6,
+  },
   stepDot: {
     width: 22,
     height: 22,
