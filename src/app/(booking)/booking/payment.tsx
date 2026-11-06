@@ -20,6 +20,7 @@ import { payBooking, removeBookingVoucher, setBookingVoucher } from '@/services/
 import { isApiError } from '@/services/api/errors';
 import { useSession } from '@/providers/session-provider';
 import { notifyBookingConfirmed } from '@/services/booking-notifications';
+import { cancelPaymentReminder, notifyPaymentFailed } from '@/services/payment-notifications';
 import { registerForPush } from '@/services/push/push-notifications';
 import { formatDuration, formatLongDate, formatTime, vnDateOf } from '@/utils/datetime';
 import { errorMessage } from '@/utils/error-messages';
@@ -130,7 +131,9 @@ export default function PaymentScreen() {
       if (result.bookingStatus === 'CONFIRMED' && booking && user) {
         // The code is assigned when the payment succeeds: the booking loaded before has none yet.
         void notifyBookingConfirmed({ ...booking, bookingCode: result.bookingCode }, user.id);
+        void cancelPaymentReminder(booking.id);
       }
+      if (result.bookingStatus === 'PAYMENT_FAILED' && booking) void notifyPaymentFailed(booking);
       if (result.bookingStatus === 'PENDING_PAYMENT') {
         // The payment was cancelled; the reservation is kept.
         setMessage({

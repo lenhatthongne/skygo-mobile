@@ -18,6 +18,7 @@ import { useFlight } from '@/hooks/use-flight';
 import { useTheme } from '@/hooks/use-theme';
 import { useSession } from '@/providers/session-provider';
 import { createBooking, createRoundTrip } from '@/services/api/bookings';
+import { schedulePaymentReminder } from '@/services/payment-notifications';
 import { getSeatMap } from '@/services/api/flights';
 import { clearDraft, loadDraft, saveDraft } from '@/services/booking-draft';
 import { isApiError } from '@/services/api/errors';
@@ -402,6 +403,8 @@ export default function PassengersScreen() {
         passengers,
       });
       clearDraft();
+      // Unpaid seats are held for a short time: remind the customer shortly before they are released.
+      void schedulePaymentReminder(booking);
       router.replace({ pathname: '/booking/payment', params: { bookingId: booking.id } });
     } catch (e) {
       if (isApiError(e) && e.code === 'PRICE_CHANGED') {

@@ -585,6 +585,12 @@ export const en: Resources = {
     title: 'Booking confirmed',
     body: '{{from}} → {{to}} at {{time}} on {{date}}. Booking code {{code}}.',
   },
+  paymentNotice: {
+    failedTitle: 'Payment did not go through',
+    failedBody: '{{from}} → {{to}}: you were not charged. Your seats are held until {{time}}, please try paying again.',
+    holdTitle: 'Your seats are about to be released',
+    holdBody: '{{from}} → {{to}}: your seats are held until {{time}}. Pay now so you do not lose them.',
+  },
   reminder: {
     dayTitle: 'You fly tomorrow',
     hoursTitle: 'Departure is near',

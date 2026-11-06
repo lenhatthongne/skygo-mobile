@@ -5,6 +5,7 @@ import { armUnauthorizedHandler, setUnauthorizedHandler } from '@/services/api/c
 import { isApiError } from '@/services/api/errors';
 import { clearSession, loadSession, saveTokens, saveUser } from '@/services/api/token-store';
 import { cancelFlightReminders } from '@/services/flight-reminders';
+import { cancelPaymentReminders } from '@/services/payment-notifications';
 import { unregisterFromPush } from '@/services/push/push-notifications';
 
 /** `expired`: the server rejected the session. Screens stay open while the user is asked to sign in again. */
@@ -70,7 +71,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         void saveUser(fresh);
       } catch (e) {
         // A 401 is handled by the interceptor. Offline or timeout keeps the cached session.
-        if (!cancelled && !stored.user && isApiError(e) && e.kind !== 'http') setStatus('signedOut');
+        if (!cancelled && !stored.user && isApiError(e) && e.kind !== 'http')
+          setStatus('signedOut');
       }
     })();
 
@@ -108,6 +110,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     await unregisterFromPush();
     // Reminders on this phone belong to the account that is leaving.
     await cancelFlightReminders().catch(() => undefined);
+    await cancelPaymentReminders().catch(() => undefined);
     try {
       await authApi.logout();
     } catch {

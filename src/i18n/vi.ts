@@ -575,6 +575,12 @@ export const vi = {
     title: 'Đặt vé thành công',
     body: '{{from}} → {{to}} lúc {{time}} ngày {{date}}. Mã đặt chỗ {{code}}.',
   },
+  paymentNotice: {
+    failedTitle: 'Thanh toán chưa thành công',
+    failedBody: '{{from}} → {{to}}: chưa bị trừ tiền. Chỗ vẫn được giữ đến {{time}}, hãy thử thanh toán lại.',
+    holdTitle: 'Sắp hết thời gian giữ chỗ',
+    holdBody: '{{from}} → {{to}}: chỗ của bạn được giữ đến {{time}}. Thanh toán ngay để không mất chỗ.',
+  },
   reminder: {
     dayTitle: 'Ngày mai bạn có chuyến bay',
     hoursTitle: 'Sắp đến giờ bay',

@@ -144,12 +144,21 @@ export default function NotificationsScreen() {
         {list.map((item) => {
           const confirmed = item.type === 'BOOKING_CONFIRMED';
           const support = item.type === 'SUPPORT_REPLY';
-          const tint = support ? theme.primary : confirmed ? theme.success : theme.warning;
+          const failed = item.type === 'PAYMENT_FAILED';
+          const tint = support
+            ? theme.primary
+            : confirmed
+              ? theme.success
+              : failed
+                ? theme.danger
+                : theme.warning;
           const soft = support
             ? theme.primarySoft
             : confirmed
               ? theme.successSoft
-              : theme.warningSoft;
+              : failed
+                ? theme.dangerSoft
+                : theme.warningSoft;
           return (
             <ReanimatedSwipeable
               key={item.id}
@@ -180,7 +189,15 @@ export default function NotificationsScreen() {
                 ]}>
                 <View style={[styles.icon, { backgroundColor: soft }]}>
                   <Feather
-                    name={support ? 'message-circle' : confirmed ? 'check-circle' : 'clock'}
+                    name={
+                      support
+                        ? 'message-circle'
+                        : confirmed
+                          ? 'check-circle'
+                          : failed
+                            ? 'x-circle'
+                            : 'clock'
+                    }
                     size={20}
                     color={tint}
                   />

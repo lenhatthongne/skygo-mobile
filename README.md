@@ -1,57 +1,40 @@
-# Welcome to your Expo app 👋
+# SkyGo Mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Ứng dụng đặt vé máy bay SkyGo cho khách hàng (Android và iOS), viết bằng Expo và React Native với Expo Router.
 
-## Get started
+Tính năng chính: đăng ký và đăng nhập bằng OTP, tìm chuyến, chọn hạng vé, đặt chỗ và chọn ghế, voucher, thanh toán
+mô phỏng, vé QR dùng được khi không có mạng (lưu thành ảnh), bản đồ sân bay, trợ lý AI, chat hỗ trợ thời gian thực
+có ảnh, thông báo và nhắc giờ bay, tiếng Việt và tiếng Anh.
 
-1. Install dependencies
+## Chạy
 
-   ```bash
-   npm install
-   ```
+```bash
+npm install
+npx expo start
+```
 
-2. Start the app
+Ứng dụng gọi backend `skygo-backend` (mặc định `https://skygo-backend.onrender.com/api`, đổi bằng
+`EXPO_PUBLIC_API_URL`). Có mã native (bản đồ, camera, thông báo) nên cần development build, không chạy trong Expo Go.
 
-   ```bash
-   npx expo start
-   ```
+## Cấu trúc
 
-In the output, you'll find options to open the app in a
+- `src/app/`: chỉ chứa màn hình, chia theo route group, mỗi group có `_layout.tsx` (`(auth)`, `(tabs)`, `(search)`,
+  `(booking)`, `(trip)`, `(support)`, `(passengers)`, `(inbox)`, `(offers)`, `(assistant)`).
+- `src/components/`: thành phần giao diện dùng lại, chia theo tính năng; `ui/` cho thành phần chung, `shell/` cho
+  thanh tab và màn khởi động.
+- `src/services/`: gọi API (một instance axios), thông báo, kết nối WebSocket, lưu ngoại tuyến.
+- `src/hooks/`, `src/utils/`, `src/i18n/`, `src/types/`, `src/constants/`.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+Quy tắc chi tiết nằm trong `.claude/rules/` và `AGENTS.md`.
 
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Kiểm tra
 
-### Other setup steps
+```bash
+npx tsc --noEmit
+npx expo lint
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Dựng APK Android
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
-
-## Thử tìm chuyến bằng AI
-
-Trong `.env.local`, cấu hình địa chỉ API SkyGo như trong `.env.example`, đặt
-`EXPO_PUBLIC_ENABLE_FLIGHT_AI=true` và thêm `GEMINI_API_KEY` từ Google AI Studio.
-Khởi động lại bằng `npx expo start`, mở Tìm chuyến bay và thử
-“Sài Gòn đi Đà Nẵng ngày mai, 2 người, bay sau 18h”.
-
-Expo dev server gọi Gemini từ API route nội bộ. Chỉ dùng câu tìm chuyến thử nghiệm,
-không nhập thông tin hành khách hoặc mã đặt chỗ. Bản demo giới hạn 5 yêu cầu mỗi
-phút trên dev server và được tắt trong bản phát hành.
+Xem mục "Triển khai và build" trong `../CLAUDE.md`. Thông báo đẩy cần `google-services.json` của Firebase đặt ở thư mục
+này (không đưa lên Git); hướng dẫn trong `skygo-backend/docs/FIREBASE_PUSH.md`.

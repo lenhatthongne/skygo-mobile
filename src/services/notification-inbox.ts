@@ -19,7 +19,12 @@ const keyOf = (userId: number) => `skygo.notifications.${userId}`;
 export type InboxItem = {
   /** The notification's own identifier: the same notification is never listed twice. */
   id: string;
-  type: 'BOOKING_CONFIRMED' | 'FLIGHT_REMINDER' | 'SUPPORT_REPLY';
+  type:
+    | 'BOOKING_CONFIRMED'
+    | 'FLIGHT_REMINDER'
+    | 'SUPPORT_REPLY'
+    | 'PAYMENT_FAILED'
+    | 'PAYMENT_PENDING';
   /** The booking this is about; for SUPPORT_REPLY the id of the support conversation. */
   bookingId: string;
   title: string;

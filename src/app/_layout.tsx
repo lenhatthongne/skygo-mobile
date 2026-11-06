@@ -5,7 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { AppState, useColorScheme, View } from 'react-native';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { AnimatedSplashOverlay } from '@/components/shell/animated-icon';
 import { restoreLanguage } from '@/i18n';
 import { SessionExpiredDialog } from '@/components/session/session-expired-dialog';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
@@ -87,9 +87,9 @@ function RootNavigator() {
           <Stack.Screen name="(trip)" />
           <Stack.Screen name="(support)" />
           <Stack.Screen name="(passengers)" />
-          <Stack.Screen name="notifications" />
-          <Stack.Screen name="offers" />
-          <Stack.Screen name="assistant" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="(inbox)" />
+          <Stack.Screen name="(offers)" />
+          <Stack.Screen name="(assistant)" options={{ presentation: 'modal' }} />
         </Stack.Protected>
         <Stack.Protected guard={!signedIn}>
           <Stack.Screen name="(auth)" />

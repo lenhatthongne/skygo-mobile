@@ -117,13 +117,18 @@ export type BookingPushData = { bookingId: string; userId: number | null };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Validates a notification payload; only `BOOKING_CONFIRMED` / `FLIGHT_REMINDER` with a UUID booking. */
+/**
+ * Validates a notification payload about a booking: `BOOKING_CONFIRMED`, `FLIGHT_REMINDER` and the
+ * local payment notices (`PAYMENT_FAILED`, `PAYMENT_PENDING`), each with a UUID booking.
+ */
 export function parseBookingPush(data: unknown): BookingPushData | null {
   if (!data || typeof data !== 'object') return null;
   const { type, bookingId, userId } = data as Record<string, unknown>;
-  if (type !== 'BOOKING_CONFIRMED' && type !== 'FLIGHT_REMINDER') return null;
+  const local =
+    type === 'FLIGHT_REMINDER' || type === 'PAYMENT_FAILED' || type === 'PAYMENT_PENDING';
+  if (type !== 'BOOKING_CONFIRMED' && !local) return null;
   if (typeof bookingId !== 'string' || !UUID.test(bookingId)) return null;
-  if (type === 'FLIGHT_REMINDER') return { bookingId, userId: null };
+  if (local) return { bookingId, userId: null };
   if (typeof userId !== 'number') return null;
   return { bookingId, userId };
 }

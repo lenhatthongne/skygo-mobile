@@ -41,7 +41,13 @@ export function usePushNotifications() {
       const push = parseBookingPush(request.content.data);
       if (!push || (push.userId !== null && push.userId !== userId)) return;
       const type = (request.content.data as { type?: unknown }).type;
-      if (type !== 'BOOKING_CONFIRMED' && type !== 'FLIGHT_REMINDER') return;
+      if (
+        type !== 'BOOKING_CONFIRMED' &&
+        type !== 'FLIGHT_REMINDER' &&
+        type !== 'PAYMENT_FAILED' &&
+        type !== 'PAYMENT_PENDING'
+      )
+        return;
       addNotification({
         id: request.identifier,
         type,

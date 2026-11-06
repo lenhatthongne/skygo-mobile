@@ -1,6 +1,7 @@
 import { listBookings } from '@/services/api/bookings';
 import { syncFlightReminders } from '@/services/flight-reminders';
 import { loadTrips, saveTrips } from '@/services/offline-store';
+import { syncPaymentReminders } from '@/services/payment-notifications';
 
 import { usePagedList } from './use-paged-list';
 
@@ -9,6 +10,7 @@ const keyOf = (b: Api.Booking) => b.id;
 function onFresh(items: Api.Booking[]) {
   void saveTrips(items);
   void syncFlightReminders(items);
+  void syncPaymentReminders(items);
 }
 
 async function offline() {
