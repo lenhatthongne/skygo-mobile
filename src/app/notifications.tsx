@@ -1,8 +1,9 @@
 import { Feather } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { LayoutAnimation, Linking, Pressable, StyleSheet, View } from 'react-native';
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import { AppText } from '@/components/ui/app-text';
 import { Button } from '@/components/ui/button';
@@ -13,12 +14,16 @@ import { reminderPermission } from '@/services/flight-reminders';
 import { useTheme } from '@/hooks/use-theme';
 import {
   type InboxItem,
+  clearNotifications,
   markAllRead,
   markRead,
+  removeNotification,
+  restoreNotification,
   useInboxItems,
   useUnreadCount,
 } from '@/services/notification-inbox';
 import { formatDateTime, todayVn, vnDateOf } from '@/utils/datetime';
+import { openInboxItem } from '@/utils/notification-target';
 
 const HOUR_MS = 3600_000;
 
@@ -49,9 +54,35 @@ export default function NotificationsScreen() {
   const todayItems = items.filter((i) => vnDateOf(i.at) === today);
   const earlierItems = items.filter((i) => vnDateOf(i.at) !== today);
 
+  // The last notification swiped away, kept for a few seconds so it can be brought back.
+  const [removed, setRemoved] = useState<InboxItem | null>(null);
+  useEffect(() => {
+    if (!removed) return;
+    const timer = setTimeout(() => setRemoved(null), 5000);
+    return () => clearTimeout(timer);
+  }, [removed]);
+
   function open(item: InboxItem) {
     markRead(item.id);
-    router.push({ pathname: '/trips/[id]', params: { id: item.bookingId } });
+    openInboxItem(item);
+  }
+
+  function remove(item: InboxItem) {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    if (removeNotification(item.id)) setRemoved(item);
+  }
+
+  function undo() {
+    if (!removed) return;
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    restoreNotification(removed);
+    setRemoved(null);
+  }
+
+  function clearAll() {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    clearNotifications();
+    setRemoved(null);
   }
 
   function ago(iso: string) {
@@ -70,48 +101,86 @@ export default function NotificationsScreen() {
         </AppText>
         {list.map((item) => {
           const confirmed = item.type === 'BOOKING_CONFIRMED';
-          const tint = confirmed ? theme.success : theme.warning;
-          const soft = confirmed ? theme.successSoft : theme.warningSoft;
+          const support = item.type === 'SUPPORT_REPLY';
+          const tint = support ? theme.primary : confirmed ? theme.success : theme.warning;
+          const soft = support
+            ? theme.primarySoft
+            : confirmed
+              ? theme.successSoft
+              : theme.warningSoft;
           return (
-            <Pressable
+            <ReanimatedSwipeable
               key={item.id}
-              accessibilityRole="button"
-              accessibilityLabel={`${item.read ? '' : `${t('inbox.unread')}. `}${item.title}. ${item.body}`}
-              onPress={() => open(item)}
-              style={[
-                styles.row,
-                {
-                  backgroundColor: item.read ? theme.background : theme.primarySoft,
-                  borderColor: item.read ? theme.border : theme.primary,
-                },
-              ]}>
-              <View style={[styles.icon, { backgroundColor: soft }]}>
-                <Feather name={confirmed ? 'check-circle' : 'clock'} size={20} color={tint} />
-              </View>
-              <View style={styles.text}>
-                <View style={styles.titleRow}>
-                  <AppText variant="bodyBold" style={styles.title} numberOfLines={2}>
-                    {item.title}
+              friction={1.6}
+              rightThreshold={72}
+              overshootRight={false}
+              renderRightActions={() => (
+                <View
+                  style={[styles.deleteAction, { backgroundColor: theme.danger }]}
+                  accessibilityElementsHidden>
+                  <Feather name="trash-2" size={22} color="#fff" />
+                  <AppText variant="smallBold" style={{ color: '#fff' }}>
+                    {t('inbox.delete')}
                   </AppText>
-                  {!item.read ? (
-                    <View style={[styles.dot, { backgroundColor: theme.danger }]} />
-                  ) : null}
                 </View>
-                <AppText variant="small" tone="textSecondary" numberOfLines={3}>
-                  {item.body}
-                </AppText>
-                <AppText variant="caption" tone="textMuted">
-                  {ago(item.at)}
-                </AppText>
-              </View>
-            </Pressable>
+              )}
+              onSwipeableOpen={() => remove(item)}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`${item.read ? '' : `${t('inbox.unread')}. `}${item.title}. ${item.body}`}
+                onPress={() => open(item)}
+                style={[
+                  styles.row,
+                  {
+                    backgroundColor: item.read ? theme.background : theme.primarySoft,
+                    borderColor: item.read ? theme.border : theme.primary,
+                  },
+                ]}>
+                <View style={[styles.icon, { backgroundColor: soft }]}>
+                  <Feather
+                    name={support ? 'message-circle' : confirmed ? 'check-circle' : 'clock'}
+                    size={20}
+                    color={tint}
+                  />
+                </View>
+                <View style={styles.text}>
+                  <View style={styles.titleRow}>
+                    <AppText variant="bodyBold" style={styles.title} numberOfLines={2}>
+                      {item.title}
+                    </AppText>
+                    {!item.read ? (
+                      <View style={[styles.dot, { backgroundColor: theme.danger }]} />
+                    ) : null}
+                  </View>
+                  <AppText variant="small" tone="textSecondary" numberOfLines={3}>
+                    {item.body}
+                  </AppText>
+                  <AppText variant="caption" tone="textMuted">
+                    {ago(item.at)}
+                  </AppText>
+                </View>
+              </Pressable>
+            </ReanimatedSwipeable>
           );
         })}
       </View>
     );
 
   return (
-    <Screen header={{ title: t('inbox.title'), onBack: () => router.back() }}>
+    <Screen
+      header={{ title: t('inbox.title'), onBack: () => router.back() }}
+      footer={
+        removed ? (
+          <View style={[styles.undoBar, { backgroundColor: theme.text }]}>
+            <AppText style={{ color: theme.background, flex: 1 }}>{t('inbox.removed')}</AppText>
+            <Pressable accessibilityRole="button" hitSlop={8} onPress={undo} style={styles.undoBtn}>
+              <AppText variant="bodyBold" style={{ color: theme.primarySoft }}>
+                {t('inbox.undo')}
+              </AppText>
+            </Pressable>
+          </View>
+        ) : undefined
+      }>
       {systemOn === false ? (
         <View
           style={[
@@ -147,17 +216,31 @@ export default function NotificationsScreen() {
         </View>
       ) : (
         <>
-          {unread > 0 ? (
+          <View style={styles.actionsRow}>
+            <AppText variant="caption" tone="textMuted" style={styles.hint}>
+              {t('inbox.swipeHint')}
+            </AppText>
+            {unread > 0 ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={markAllRead}
+                hitSlop={8}
+                style={styles.markAll}>
+                <AppText variant="smallBold" tone="primaryDark">
+                  {t('inbox.markAll')}
+                </AppText>
+              </Pressable>
+            ) : null}
             <Pressable
               accessibilityRole="button"
-              onPress={markAllRead}
+              onPress={clearAll}
               hitSlop={8}
               style={styles.markAll}>
-              <AppText variant="smallBold" tone="primaryDark">
-                {t('inbox.markAll')}
+              <AppText variant="smallBold" tone="danger">
+                {t('inbox.clearAll')}
               </AppText>
             </Pressable>
-          ) : null}
+          </View>
           {renderGroup(t('inbox.today'), todayItems)}
           {renderGroup(t('inbox.earlier'), earlierItems)}
         </>
@@ -179,7 +262,25 @@ const styles = StyleSheet.create({
   systemButton: { minWidth: 100 },
   group: { gap: 10, marginTop: 8 },
   groupLabel: { marginLeft: 2, marginTop: 8 },
-  markAll: { alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 },
+  actionsRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  hint: { flex: 1 },
+  markAll: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 },
+  deleteAction: {
+    width: 96,
+    marginLeft: 8,
+    borderRadius: Radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  undoBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: Radius.lg,
+    paddingHorizontal: 16,
+    minHeight: 52,
+  },
+  undoBtn: { minHeight: 44, justifyContent: 'center', paddingLeft: 12 },
   row: {
     flexDirection: 'row',
     gap: 12,

@@ -140,12 +140,11 @@ export default function BookingResultScreen() {
         <>
           <Button
             label="Xem vé điện tử"
-            onPress={() =>
-              router.replace({
-                pathname: '/trips/[id]/ticket',
-                params: { id: booking.id },
-              })
-            }
+            onPress={() => {
+              // Back from the ticket lands on the trip list, not on the finished booking flow.
+              router.dismissTo('/trips');
+              router.push({ pathname: '/trips/[id]/ticket', params: { id: booking.id } });
+            }}
           />
           <Button label="Về trang chủ" variant="ghost" onPress={goHome} />
         </>

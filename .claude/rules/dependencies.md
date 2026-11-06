@@ -14,6 +14,7 @@
 | Lưu vé offline | `expo-sqlite` hoặc `@react-native-async-storage/async-storage` |
 | Độ sáng khi mở vé | `expo-brightness` |
 | Sao chép | `expo-clipboard` |
+| Lưu vé QR thành ảnh | `react-native-view-shot` (chụp thẻ vé) + `expo-media-library` (`Asset.create`, quyền chỉ ghi) |
 | Bản đồ sân bay | Android: `@maplibre/maplibre-react-native` (OpenFreeMap, không key); iOS: `react-native-maps` (Apple Maps) |
 | Bàn phím không che ô nhập | `react-native-keyboard-controller` (đã cài, `KeyboardProvider` ở layout gốc) |
 | Thông báo đẩy, nhắc giờ bay cục bộ | `expo-notifications` (đã cài) |

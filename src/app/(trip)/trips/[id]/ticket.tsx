@@ -1,10 +1,12 @@
 import { Feather } from '@expo/vector-icons';
 import * as Brightness from 'expo-brightness';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect } from 'react';
+import { type ComponentRef, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import { captureRef } from 'react-native-view-shot';
+import { Asset, requestPermissionsAsync } from 'expo-media-library';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AirlineBadge } from '@/components/flight/airline-badge';
@@ -122,10 +124,40 @@ function TicketBody({
   const lead = booking.passengers[0];
   const extra = booking.passengers.length - 1;
   const muted = revoked ? 0.55 : 1;
+  const card = useRef<ComponentRef<typeof View>>(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState<{
+    tone: 'success' | 'warning' | 'error';
+    text: string;
+  } | null>(null);
+
+  /** Saves the ticket card (flight details and QR) as a picture in the phone's gallery. */
+  async function saveImage() {
+    if (saving) return;
+    setSaving(true);
+    setSaved(null);
+    try {
+      const permission = await requestPermissionsAsync(true);
+      if (!permission.granted) {
+        setSaved({ tone: 'warning', text: t('ticketScreen.saveDenied') });
+        return;
+      }
+      const uri = await captureRef(card, { format: 'png', quality: 1, result: 'tmpfile' });
+      await Asset.create(uri);
+      setSaved({ tone: 'success', text: t('ticketScreen.saveDone') });
+    } catch {
+      setSaved({ tone: 'error', text: t('ticketScreen.saveFailed') });
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <>
-      <View style={[styles.card, { backgroundColor: theme.background }]}>
+      <View
+        ref={card}
+        collapsable={false}
+        style={[styles.card, { backgroundColor: theme.background }]}>
         <View style={styles.airline}>
           <View style={{ opacity: muted }}>
             <AirlineBadge airline={flight.airline} size={48} />
@@ -301,6 +333,14 @@ function TicketBody({
               </AppText>
             </View>
           )}
+          <Button
+            label={t('ticketScreen.saveImage')}
+            icon="download"
+            variant="outline"
+            loading={saving}
+            onPress={() => void saveImage()}
+          />
+          {saved ? <Banner tone={saved.tone}>{saved.text}</Banner> : null}
           {offline ? (
             <Button label={t('ticketScreen.reconnect')} variant="outline" onPress={onRetry} />
           ) : null}

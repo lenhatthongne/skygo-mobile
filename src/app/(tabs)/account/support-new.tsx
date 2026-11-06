@@ -42,8 +42,12 @@ export default function NewSupportRequestScreen() {
     setMessage(null);
     setServerErrors({});
     try {
-      await createSupportRequest({ subject: subject.trim(), content: content.trim() });
-      router.back();
+      const created = await createSupportRequest({
+        subject: subject.trim(),
+        content: content.trim(),
+      });
+      // Straight into the conversation, where the customer can keep writing and add photos.
+      router.replace({ pathname: '/account/support-detail', params: { id: String(created.id) } });
     } catch (e) {
       // The text stays in the form so nothing has to be typed again.
       setServerErrors(fieldErrors(e));

@@ -16,7 +16,8 @@ src/app/
   _layout.tsx        providers, Stack gốc, chặn route theo đăng nhập (Stack.Protected)
   index.tsx          "/" chỉ chuyển hướng: đã đăng nhập → /home, chưa → /login
   (auth)/            login, register, otp
-  (tabs)/            home, trips/, explore, account/
+  (tabs)/            home, trips/ (chỉ danh sách + seats), explore, account/
+  (trip)/            trips/[id]/ (chi tiết, giá, ghế, vé, hủy): URL /trips/[id] nhưng nằm trên tab, nên tab "Chuyến đi" chỉ chứa danh sách
   (search)/          công khai (không cần đăng nhập): search/ (form, airport, date, travellers, results, filters), flight/[id]/ (index = chi tiết, fares = chọn hạng vé)
   (booking)/         booking/passengers, payment, result (chỉ khi đã đăng nhập; nhận fareClassId và số khách qua route params, báo giá lại ở màn đầu)
 ```

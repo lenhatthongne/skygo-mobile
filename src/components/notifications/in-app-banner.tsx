@@ -1,5 +1,4 @@
 import { Feather } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Animated, Pressable, StyleSheet, View } from 'react-native';
@@ -9,6 +8,7 @@ import { AppText } from '@/components/ui/app-text';
 import { Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { type InboxItem, markRead, onNotificationAnnounced } from '@/services/notification-inbox';
+import { openInboxItem } from '@/utils/notification-target';
 
 const SHOW_MS = 4500;
 const SLIDE_FROM = -140;
@@ -41,8 +41,9 @@ export function InAppNotificationBanner() {
   if (!item) return null;
 
   const confirmed = item.type === 'BOOKING_CONFIRMED';
-  const tint = confirmed ? theme.success : theme.warning;
-  const soft = confirmed ? theme.successSoft : theme.warningSoft;
+  const support = item.type === 'SUPPORT_REPLY';
+  const tint = support ? theme.primary : confirmed ? theme.success : theme.warning;
+  const soft = support ? theme.primarySoft : confirmed ? theme.successSoft : theme.warningSoft;
 
   function close() {
     slide.setValue(0);
@@ -52,9 +53,9 @@ export function InAppNotificationBanner() {
   function open() {
     if (!item) return;
     markRead(item.id);
-    const id = item.bookingId;
+    const target = item;
     close();
-    router.push({ pathname: '/trips/[id]', params: { id } });
+    openInboxItem(target);
   }
 
   return (
@@ -78,7 +79,11 @@ export function InAppNotificationBanner() {
           onPress={open}
           style={styles.main}>
           <View style={[styles.icon, { backgroundColor: soft }]}>
-            <Feather name={confirmed ? 'check-circle' : 'clock'} size={20} color={tint} />
+            <Feather
+              name={support ? 'message-circle' : confirmed ? 'check-circle' : 'clock'}
+              size={20}
+              color={tint}
+            />
           </View>
           <View style={styles.text}>
             <AppText variant="bodyBold" numberOfLines={1}>

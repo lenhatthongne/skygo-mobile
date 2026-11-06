@@ -1,4 +1,5 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
@@ -9,6 +10,7 @@ import { restoreLanguage } from '@/i18n';
 import { InAppNotificationBanner } from '@/components/notifications/in-app-banner';
 import { SessionExpiredDialog } from '@/components/session/session-expired-dialog';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
+import { useSupportNotifications } from '@/hooks/use-support-notifications';
 import { useTheme } from '@/hooks/use-theme';
 import { SessionProvider, useSession } from '@/providers/session-provider';
 import { wakeServer } from '@/services/api/warmup';
@@ -39,15 +41,23 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <KeyboardProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <SessionProvider>
-          <AnimatedSplashOverlay />
-          <RootNavigator />
-        </SessionProvider>
-      </ThemeProvider>
-    </KeyboardProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <KeyboardProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <SessionProvider>
+            <AnimatedSplashOverlay />
+            <RootNavigator />
+          </SessionProvider>
+        </ThemeProvider>
+      </KeyboardProvider>
+    </GestureHandlerRootView>
   );
+}
+
+/** Lists new replies from SkyGo support as notifications while the app is open. */
+function SupportNotificationBridge({ enabled }: { enabled: boolean }) {
+  useSupportNotifications(enabled);
+  return null;
 }
 
 /** Mounted only once the navigator exists, so a tap that launched the app can navigate. */
@@ -74,6 +84,7 @@ function RootNavigator() {
         <Stack.Protected guard={signedIn}>
           <Stack.Screen name="(tabs)" options={{ presentation: 'card' }} />
           <Stack.Screen name="(booking)" />
+          <Stack.Screen name="(trip)" />
           <Stack.Screen name="notifications" />
           <Stack.Screen name="offers" />
           <Stack.Screen name="assistant" options={{ presentation: 'modal' }} />
@@ -83,6 +94,7 @@ function RootNavigator() {
         </Stack.Protected>
       </Stack>
       <PushNotificationBridge />
+      <SupportNotificationBridge enabled={status === 'signedIn'} />
       {signedIn ? <InAppNotificationBanner /> : null}
       <SessionExpiredDialog />
     </>

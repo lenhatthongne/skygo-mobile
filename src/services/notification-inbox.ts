@@ -19,7 +19,8 @@ const keyOf = (userId: number) => `skygo.notifications.${userId}`;
 export type InboxItem = {
   /** The notification's own identifier: the same notification is never listed twice. */
   id: string;
-  type: 'BOOKING_CONFIRMED' | 'FLIGHT_REMINDER';
+  type: 'BOOKING_CONFIRMED' | 'FLIGHT_REMINDER' | 'SUPPORT_REPLY';
+  /** The booking this is about; for SUPPORT_REPLY the id of the support conversation. */
   bookingId: string;
   title: string;
   body: string;
@@ -49,7 +50,9 @@ const isItem = (x: unknown): x is InboxItem => {
   const o = x as Record<string, unknown>;
   return (
     typeof o.id === 'string' &&
-    (o.type === 'BOOKING_CONFIRMED' || o.type === 'FLIGHT_REMINDER') &&
+    (o.type === 'BOOKING_CONFIRMED' ||
+      o.type === 'FLIGHT_REMINDER' ||
+      o.type === 'SUPPORT_REPLY') &&
     typeof o.bookingId === 'string' &&
     typeof o.title === 'string' &&
     typeof o.body === 'string' &&
@@ -118,6 +121,35 @@ export function markRead(notificationId: string) {
   }
   if (!items.some((i) => i.id === notificationId && !i.read)) return;
   items = items.map((i) => (i.id === notificationId ? { ...i, read: true } : i));
+  persist();
+  publish();
+}
+
+/** Swiped away: the notification leaves the list (and the phone's tray). Returns it for undo. */
+export function removeNotification(notificationId: string) {
+  const found = items.find((i) => i.id === notificationId);
+  if (!found) return null;
+  if (supported) {
+    void Notifications.dismissNotificationAsync(notificationId).catch(() => undefined);
+  }
+  items = items.filter((i) => i.id !== notificationId);
+  persist();
+  publish();
+  return found;
+}
+
+/** Puts a deleted notification back where its time belongs (the undo after a swipe). */
+export function restoreNotification(item: InboxItem) {
+  if (userId === null || items.some((i) => i.id === item.id)) return;
+  items = [...items, item].sort((a, b) => b.at.localeCompare(a.at)).slice(0, MAX_ITEMS);
+  persist();
+  publish();
+}
+
+export function clearNotifications() {
+  if (supported) void Notifications.dismissAllNotificationsAsync().catch(() => undefined);
+  if (items.length === 0) return;
+  items = [];
   persist();
   publish();
 }

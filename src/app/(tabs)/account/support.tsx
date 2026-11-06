@@ -109,27 +109,30 @@ export default function SupportRequestsScreen() {
                     </AppText>
                   </View>
                   <AppText variant="small" tone="textMuted">
-                    {formatDayMonth(vnDateOf(r.createdAt))}
+                    {formatDayMonth(vnDateOf(r.lastMessageAt ?? r.createdAt))}
                   </AppText>
                 </View>
                 <AppText variant="bodyBold" style={styles.subject}>
                   {r.subject}
                 </AppText>
-                <AppText tone="textSecondary" numberOfLines={closed ? 2 : 4}>
-                  {r.content}
-                </AppText>
-                {r.adminReply ? (
-                  <View
-                    style={[
-                      styles.reply,
-                      { backgroundColor: theme.primarySoft, borderColor: theme.primary },
-                    ]}>
-                    <AppText variant="smallBold" tone="primaryDark">
-                      {t('support.reply')}
-                    </AppText>
-                    <AppText>{r.adminReply}</AppText>
-                  </View>
-                ) : null}
+                <View style={styles.previewRow}>
+                  <AppText
+                    tone={r.unread > 0 ? 'text' : 'textSecondary'}
+                    numberOfLines={2}
+                    style={styles.preview}>
+                    {r.lastSender === 'CUSTOMER' ? `${t('supportDetail.you')}: ` : ''}
+                    {r.lastMessage === '[Ảnh]'
+                      ? t('supportChat.photoPreview')
+                      : (r.lastMessage ?? r.content)}
+                  </AppText>
+                  {r.unread > 0 ? (
+                    <View style={[styles.unread, { backgroundColor: theme.danger }]}>
+                      <AppText variant="caption" style={{ color: '#fff' }}>
+                        {r.unread > 9 ? '9+' : r.unread}
+                      </AppText>
+                    </View>
+                  ) : null}
+                </View>
               </Pressable>
             );
           })
@@ -154,7 +157,16 @@ const styles = StyleSheet.create({
   },
   dot: { width: 8, height: 8, borderRadius: 4 },
   subject: { fontSize: 17, lineHeight: 24 },
-  reply: { borderLeftWidth: 3, borderRadius: Radius.sm, padding: 12, gap: 4, marginTop: 4 },
+  previewRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  preview: { flex: 1 },
+  unread: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   empty: { alignItems: 'center', gap: 10, paddingTop: 48, paddingHorizontal: 12 },
   emptyIcon: {
     width: 64,
