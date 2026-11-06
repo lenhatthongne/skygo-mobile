@@ -106,11 +106,12 @@ const announceListeners = new Set<(item: InboxItem) => void>();
 /**
  * Lists a reply from SkyGo support like any notification (the bell counts it, tapping opens the
  * chat) and, when `announce` is on, shows the in-app strip. Nothing happens when the customer is
- * already looking at that conversation or at Messages: they have just seen it.
+ * already looking at that conversation or at Messages: they have just seen it. Returns whether the
+ * reply was newly listed.
  */
 export function notifySupportReply(item: Omit<InboxItem, 'read'>, announce: boolean) {
-  if (activeSupport === 'list' || activeSupport === Number(item.bookingId)) return;
-  (announce ? announceNotification : addNotification)(item);
+  if (activeSupport === 'list' || activeSupport === Number(item.bookingId)) return false;
+  return (announce ? announceNotification : addNotification)(item);
 }
 
 /** The customer opened this conversation: its replies in the list no longer count as unread. */

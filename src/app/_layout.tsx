@@ -56,7 +56,8 @@ export default function RootLayout() {
 
 /** Lists new replies from SkyGo support as notifications while the app is open. */
 function SupportNotificationBridge({ enabled }: { enabled: boolean }) {
-  useSupportNotifications(enabled);
+  const { user } = useSession();
+  useSupportNotifications(enabled, user?.id);
   return null;
 }
 

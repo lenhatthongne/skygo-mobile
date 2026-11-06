@@ -5,6 +5,7 @@ import i18n from '@/i18n';
 import { toApiError } from '@/services/api/errors';
 import { getSupportUnread, listMySupportRequests } from '@/services/api/support';
 import { notifySupportReply } from '@/services/notification-inbox';
+import { showSupportReplyNotification } from '@/services/support-notifications';
 import { subscribeSupportEvents } from '@/services/support-socket';
 
 // The live connection delivers replies at once; this polling is only the fallback when it is down.
@@ -17,7 +18,7 @@ const POLL_MS = 15_000;
  * and replies already waiting when the app opens are only listed. The list is fetched only when the
  * unread count grew, so an idle app makes one small request per round.
  */
-export function useSupportNotifications(enabled: boolean) {
+export function useSupportNotifications(enabled: boolean, userId: number | undefined) {
   useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
@@ -28,7 +29,8 @@ export function useSupportNotifications(enabled: boolean) {
     let lastCount = 0;
 
     async function check() {
-      if (busy || AppState.currentState !== 'active') return;
+      // Also while the app is minimized, as long as the system keeps it alive.
+      if (busy || AppState.currentState === 'inactive') return;
       busy = true;
       try {
         const count = await getSupportUnread(controller.signal);
@@ -41,20 +43,21 @@ export function useSupportNotifications(enabled: boolean) {
           const seen = known.get(r.id);
           known.set(r.id, r.lastMessageAt);
           if (seen === r.lastMessageAt || r.unread <= 0 || r.lastSender !== 'ADMIN') continue;
-          notifySupportReply(
-            {
-              id: `support-${r.id}-${r.lastMessageAt}`,
-              type: 'SUPPORT_REPLY',
-              bookingId: String(r.id),
-              title: i18n.t('supportChat.replyTitle'),
-              body:
-                r.lastMessage && r.lastMessage !== '[Ảnh]'
-                  ? r.lastMessage
-                  : i18n.t('supportChat.photoPreview'),
-              at: r.lastMessageAt,
-            },
-            !first,
-          );
+          const item = {
+            id: `support-${r.id}-${r.lastMessageAt}`,
+            type: 'SUPPORT_REPLY' as const,
+            bookingId: String(r.id),
+            title: i18n.t('supportChat.replyTitle'),
+            body:
+              r.lastMessage && r.lastMessage !== '[Ảnh]'
+                ? r.lastMessage
+                : i18n.t('supportChat.photoPreview'),
+            at: r.lastMessageAt,
+          };
+          // A new reply also shows on the phone itself, like "Đặt vé thành công" after paying.
+          if (notifySupportReply(item, !first) && !first && userId !== undefined) {
+            void showSupportReplyNotification({ ...item, requestId: r.id }, userId);
+          }
         }
         first = false;
       } catch (e) {
@@ -79,5 +82,5 @@ export function useSupportNotifications(enabled: boolean) {
       sub.remove();
       off();
     };
-  }, [enabled]);
+  }, [enabled, userId]);
 }

@@ -25,6 +25,8 @@ Code: `src/services/push/push-notifications.ts`, `src/hooks/use-push-notificatio
 - Không báo gì khi khách đang xem đúng hội thoại đó hoặc đang ở thẻ Tin nhắn (`setActiveSupportView`). Mở hội thoại đánh dấu các trả lời của nó là đã đọc (`markSupportConversationRead`) và đánh dấu đã đọc trên server.
 - Màn Thông báo (`src/app/notifications.tsx`) có hai thẻ: Thông báo và Tin nhắn (`?tab=messages`, danh sách hội thoại kiểu ứng dụng chat, `ConversationList`, không có số đếm ở thẻ). Mục "Yêu cầu hỗ trợ" ở Tài khoản và lối tắt "Hỗ trợ" mở thẳng thẻ Tin nhắn; `/account/support` chỉ chuyển sang đó.
 
+- Một trả lời mới của SkyGo còn hiện thông báo của chính điện thoại, làm giống "Đặt vé thành công" sau thanh toán: `src/services/support-notifications.ts` (`showSupportReplyNotification`) lên lịch thông báo cục bộ không trigger khi đã được cấp quyền, payload `{type: 'SUPPORT_REPLY', requestId, userId}`. Chỉ cho trả lời **mới** (không cho tin có sẵn lúc mở app) và không khi khách đang xem hội thoại đó. Chạm thông báo mở thẳng khung chat (`use-push-notifications.ts`); chạm của tài khoản khác bị bỏ qua. Việc hỏi server chạy cả khi app thu nhỏ miễn là hệ thống còn giữ app; app đã đóng hẳn thì chưa có thông báo (cần Firebase).
+
 ## Kết nối trực tiếp (WebSocket)
 - `src/services/support-socket.ts` giữ một kết nối tới `/api/ws/support` khi app mở, đã đăng nhập (xác thực bằng tin đầu tiên, không đặt token trên địa chỉ), tự nối lại với thời gian chờ tăng dần, đóng khi app xuống nền. Server chỉ báo "hội thoại X đã đổi"; khung chat, thẻ Tin nhắn và việc kiểm tra thông báo đọc ngay qua API khi nhận được báo.
 - Hỏi định kỳ vẫn giữ làm dự phòng: 4 giây (chat) khi mất kết nối, 30 giây khi đang kết nối; thẻ Tin nhắn 12 giây hoặc 45 giây.

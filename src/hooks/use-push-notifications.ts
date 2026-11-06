@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { AppState } from 'react-native';
 
 import { useSession } from '@/providers/session-provider';
+import { openInboxItem } from '@/utils/notification-target';
 import {
   addNotification,
   announceNotification,
@@ -81,6 +82,18 @@ export function usePushNotifications() {
     if (!response || status === 'loading' || status === 'expired') return;
     const clear = () => void Notifications.clearLastNotificationResponseAsync();
     if (response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return clear();
+
+    // A reply from SkyGo support: open the chat, ready to write back.
+    const data = response.notification.request.content.data as Record<string, unknown>;
+    if (data.type === 'SUPPORT_REPLY') {
+      clear();
+      if (status !== 'signedIn' || data.userId !== userId || typeof data.requestId !== 'number') {
+        return;
+      }
+      markRead(response.notification.request.identifier);
+      openInboxItem({ type: 'SUPPORT_REPLY', bookingId: String(data.requestId) });
+      return;
+    }
 
     const push = parseBookingPush(response.notification.request.content.data);
     // A tap meant for another account (or while signed out) must not open this one's bookings.
