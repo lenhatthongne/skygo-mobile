@@ -11,8 +11,10 @@ import { AssistantFab } from '@/components/assistant/assistant-fab';
 import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
 import { useUnreadCount } from '@/services/notification-inbox';
+import { HeaderAction } from '@/components/home/header-action';
 import { Radius } from '@/constants/theme';
 import { useBookings } from '@/hooks/use-bookings';
+import { useReloadOnTabReset, useTabResetSource } from '@/hooks/use-tab-reset';
 import { useNow } from '@/hooks/use-now';
 import { useTheme } from '@/hooks/use-theme';
 import { useSession } from '@/providers/session-provider';
@@ -49,7 +51,14 @@ export default function HomeScreen() {
   const [photos, setPhotos] = useState<Record<string, string>>({});
   const [promotions, setPromotions] = useState<Api.Promotion[]>([]);
   const now = useNow(false);
-  const { items: bookings, loading: bookingsLoading, error: bookingsError } = useBookings();
+  const {
+    items: bookings,
+    loading: bookingsLoading,
+    error: bookingsError,
+    reload: reloadBookings,
+  } = useBookings();
+  useTabResetSource('home');
+  useReloadOnTabReset(reloadBookings);
   // The nearest paid trip that has not left yet.
   const next = tripsForTab(bookings, 'upcoming', now).find(
     (b) => b.status === 'CONFIRMED' || b.status === 'CANCEL_REQUESTED',
@@ -102,25 +111,12 @@ export default function HomeScreen() {
               {t('home.prompt')}
             </AppText>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={
-              unread > 0 ? t('inbox.openUnread', { count: unread }) : t('inbox.open')
-            }
+          <HeaderAction
+            icon="bell"
+            label={unread > 0 ? t('inbox.openUnread', { count: unread }) : t('inbox.open')}
+            count={unread}
             onPress={() => router.push('/notifications')}
-            hitSlop={6}
-            style={[styles.bell, { backgroundColor: theme.backgroundElement }]}>
-            <Feather name="bell" size={21} color={theme.text} />
-            {unread > 0 ? (
-              <View style={[styles.bellBadge, { backgroundColor: theme.danger }]}>
-                <AppText
-                  variant="caption"
-                  style={[styles.bellBadgeText, { color: theme.onPrimary }]}>
-                  {unread > 9 ? '9+' : unread}
-                </AppText>
-              </View>
-            ) : null}
-          </Pressable>
+          />
           <Avatar user={user} size={44} />
         </View>
 
@@ -267,19 +263,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 8 },
-  bell: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  bellBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    paddingHorizontal: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bellBadgeText: { fontSize: 11, lineHeight: 14, fontWeight: '700' },
   logo: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   avatar: {
     width: 44,

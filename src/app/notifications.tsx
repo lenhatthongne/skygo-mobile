@@ -1,15 +1,20 @@
 import { Feather } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LayoutAnimation, Linking, Pressable, StyleSheet, View } from 'react-native';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 
+import { SegmentedTabs } from '@/components/inbox/segmented-tabs';
+import { ConversationList } from '@/components/support/conversation-list';
 import { AppText } from '@/components/ui/app-text';
 import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
 import { Radius } from '@/constants/theme';
 import { useNow } from '@/hooks/use-now';
+import { useRefreshOnFocus } from '@/hooks/use-refresh-on-focus';
+import { useRemoteList } from '@/hooks/use-remote-list';
+import { listMySupportRequests } from '@/services/api/support';
 import { reminderPermission } from '@/services/flight-reminders';
 import { useTheme } from '@/hooks/use-theme';
 import {
@@ -18,6 +23,7 @@ import {
   markAllRead,
   markRead,
   removeNotification,
+  setActiveSupportView,
   restoreNotification,
   useInboxItems,
   useUnreadCount,
@@ -26,6 +32,12 @@ import { formatDateTime, todayVn, vnDateOf } from '@/utils/datetime';
 import { openInboxItem } from '@/utils/notification-target';
 
 const HOUR_MS = 3600_000;
+const MESSAGES_POLL_MS = 12_000;
+
+type InboxTab = 'notifications' | 'messages';
+
+const loadConversations = async (signal: AbortSignal) =>
+  (await listMySupportRequests(signal)).content;
 
 /** The notifications this phone received: newest first, "Hôm nay" and "Trước đó", unread marked. */
 export default function NotificationsScreen() {
@@ -34,6 +46,30 @@ export default function NotificationsScreen() {
   const items = useInboxItems();
   const unread = useUnreadCount();
   const now = useNow(true, 30_000);
+  const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
+  // The chat bubble and the Account row open this screen on Messages; the customer can switch.
+  const [chosen, setTab] = useState<InboxTab | null>(null);
+  const tab: InboxTab = chosen ?? (tabParam === 'messages' ? 'messages' : 'notifications');
+  const focused = useIsFocused();
+  const conversations = useRemoteList(loadConversations);
+  const reloadList = conversations.reload;
+
+  // Coming back from a conversation refreshes the list and the unread numbers; while Messages is
+  // showing, new replies arrive every few seconds.
+  const reloadMessages = useCallback(() => {
+    reloadList();
+  }, [reloadList]);
+  useRefreshOnFocus(reloadMessages);
+  useEffect(() => {
+    if (tab !== 'messages' || !focused) return;
+    // The list is on screen, so a reply needs no extra strip over it.
+    setActiveSupportView('list');
+    const timer = setInterval(reloadMessages, MESSAGES_POLL_MS);
+    return () => {
+      clearInterval(timer);
+      setActiveSupportView(null);
+    };
+  }, [tab, focused, reloadMessages]);
   // null until known; false when the phone blocks notifications for SkyGo.
   const [systemOn, setSystemOn] = useState<boolean | null>(null);
 
@@ -168,9 +204,25 @@ export default function NotificationsScreen() {
 
   return (
     <Screen
-      header={{ title: t('inbox.title'), onBack: () => router.back() }}
+      header={{
+        title: tab === 'messages' ? t('inbox.messagesTitle') : t('inbox.title'),
+        onBack: () => router.back(),
+      }}
+      refresh={
+        tab === 'messages'
+          ? { refreshing: conversations.refreshing, onRefresh: conversations.refresh }
+          : undefined
+      }
       footer={
-        removed ? (
+        tab === 'messages' ? (
+          conversations.items && conversations.items.length > 0 ? (
+            <Button
+              label={t('inbox.newMessage')}
+              icon="message-plus-outline"
+              onPress={() => router.push('/account/support-new')}
+            />
+          ) : undefined
+        ) : removed ? (
           <View style={[styles.undoBar, { backgroundColor: theme.text }]}>
             <AppText style={{ color: theme.background, flex: 1 }}>{t('inbox.removed')}</AppText>
             <Pressable accessibilityRole="button" hitSlop={8} onPress={undo} style={styles.undoBtn}>
@@ -181,7 +233,24 @@ export default function NotificationsScreen() {
           </View>
         ) : undefined
       }>
-      {systemOn === false ? (
+      <SegmentedTabs
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { key: 'notifications', label: t('inbox.tabNotifications') },
+          { key: 'messages', label: t('inbox.tabMessages') },
+        ]}
+      />
+      {tab === 'messages' ? (
+        <ConversationList
+          items={conversations.items}
+          loading={conversations.loading}
+          error={conversations.error}
+          onRetry={conversations.reload}
+          onNew={() => router.push('/account/support-new')}
+        />
+      ) : null}
+      {tab === 'notifications' && systemOn === false ? (
         <View
           style={[
             styles.system,
@@ -202,7 +271,7 @@ export default function NotificationsScreen() {
           />
         </View>
       ) : null}
-      {items.length === 0 ? (
+      {tab !== 'notifications' ? null : items.length === 0 ? (
         <View style={styles.empty}>
           <View style={[styles.emptyIcon, { backgroundColor: theme.primarySoft }]}>
             <Feather name="bell" size={30} color={theme.primary} />

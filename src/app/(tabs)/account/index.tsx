@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { type ComponentRef, useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +17,7 @@ import { useBookings } from '@/hooks/use-bookings';
 import { useRemoteList } from '@/hooks/use-remote-list';
 import { useSavedPassengers } from '@/hooks/use-saved-passengers';
 import { useRefreshOnFocus } from '@/hooks/use-refresh-on-focus';
+import { useReloadOnTabReset, useScrollToTopOnTabReset } from '@/hooks/use-tab-reset';
 import { useTheme } from '@/hooks/use-theme';
 import { useSession } from '@/providers/session-provider';
 import { listMyVouchers } from '@/services/api/vouchers';
@@ -54,6 +55,9 @@ export default function AccountScreen() {
     reloadTrips();
   }, [reloadSaved, reloadVouchers, reloadTrips]);
   useRefreshOnFocus(reloadAll);
+  const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
+  useScrollToTopOnTabReset(scroll);
+  useReloadOnTabReset(reloadAll);
   const refreshing = trips.refreshing || savedRefreshing || vouchersRefreshing;
   function pullToRefresh() {
     refreshSaved();
@@ -84,6 +88,7 @@ export default function AccountScreen() {
       </View>
 
       <ScrollView
+        ref={scroll}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: insets.bottom + BottomTabInset + 24 },
@@ -200,9 +205,11 @@ export default function AccountScreen() {
               onPress={() => router.push('/account/faq')}
             />
             <ListRow
-              icon="message-square"
+              icon="message-circle"
               title={t('account.supportRequests')}
-              onPress={() => router.push('/account/support')}
+              onPress={() =>
+                router.push({ pathname: '/notifications', params: { tab: 'messages' } })
+              }
             />
           </ListCard>
 

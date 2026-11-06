@@ -33,11 +33,18 @@ const listeners = new Set<() => void>();
 let userId: number | null = null;
 let items: InboxItem[] = [];
 let unreadCount = 0;
-
 function publish() {
   unreadCount = items.filter((i) => !i.read).length;
   listeners.forEach((l) => l());
   if (supported) void Notifications.setBadgeCountAsync(unreadCount).catch(() => undefined);
+}
+
+/** The support screen showing now: a conversation id, 'list' for Messages, or nothing. */
+let activeSupport: number | 'list' | null = null;
+
+/** Called by the chat and Messages screens so a reply they already show raises no strip. */
+export function setActiveSupportView(view: number | 'list' | null) {
+  activeSupport = view;
 }
 
 function persist() {
@@ -95,6 +102,27 @@ export function addNotification(item: Omit<InboxItem, 'read'>) {
 }
 
 const announceListeners = new Set<(item: InboxItem) => void>();
+
+/**
+ * Lists a reply from SkyGo support like any notification (the bell counts it, tapping opens the
+ * chat) and, when `announce` is on, shows the in-app strip. Nothing happens when the customer is
+ * already looking at that conversation or at Messages: they have just seen it.
+ */
+export function notifySupportReply(item: Omit<InboxItem, 'read'>, announce: boolean) {
+  if (activeSupport === 'list' || activeSupport === Number(item.bookingId)) return;
+  (announce ? announceNotification : addNotification)(item);
+}
+
+/** The customer opened this conversation: its replies in the list no longer count as unread. */
+export function markSupportConversationRead(requestId: number) {
+  const id = String(requestId);
+  if (!items.some((i) => i.type === 'SUPPORT_REPLY' && i.bookingId === id && !i.read)) return;
+  items = items.map((i) =>
+    i.type === 'SUPPORT_REPLY' && i.bookingId === id && !i.read ? { ...i, read: true } : i,
+  );
+  persist();
+  publish();
+}
 
 /**
  * Lists a notification that has just arrived while the app is open and tells the in-app banner

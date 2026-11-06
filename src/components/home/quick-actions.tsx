@@ -18,7 +18,7 @@ const ACTIONS: Action[] = [
   { labelKey: 'tickets', icon: 'file-text', href: '/trips' },
   { labelKey: 'passengers', icon: 'users', href: '/account/passengers' },
   { labelKey: 'offers', icon: 'gift', href: '/offers' },
-  { labelKey: 'support', icon: 'headphones', href: '/account/support' },
+  { labelKey: 'support', icon: 'headphones', href: '/notifications?tab=messages' },
   { labelKey: 'assistant', icon: 'assistant', href: '/assistant' },
 ];
 

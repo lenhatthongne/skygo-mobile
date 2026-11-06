@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -23,10 +23,15 @@ import i18n from '@/i18n';
 import { useBookings } from '@/hooks/use-bookings';
 import { useNow } from '@/hooks/use-now';
 import { useRefreshOnFocus } from '@/hooks/use-refresh-on-focus';
+import {
+  useOnTabReset,
+  useReloadOnTabReset,
+  useScrollToTopOnTabReset,
+} from '@/hooks/use-tab-reset';
 import { useTheme } from '@/hooks/use-theme';
 import { formatDateTime } from '@/utils/datetime';
 import { errorMessage } from '@/utils/error-messages';
-import { entriesForTab, isPayable, TRIP_TABS, type TripTab } from '@/utils/trips';
+import { entriesForTab, isPayable, TRIP_TABS, type TripEntry, type TripTab } from '@/utils/trips';
 
 type EmptyState = {
   icon: React.ComponentProps<typeof Feather>['name'];
@@ -92,6 +97,11 @@ export default function TripsScreen() {
   // Refresh when coming back to the tab (after paying, cancelling or going offline); the first
   // focus is covered by the initial load.
   useRefreshOnFocus(reload);
+  // Pressing the tab shows "Sắp tới" again, scrolled to the top with fresh trips.
+  const list = useRef<FlatList<TripEntry>>(null);
+  useScrollToTopOnTabReset(list);
+  useReloadOnTabReset(reload);
+  useOnTabReset(() => setTab('upcoming'));
 
   const visible = entriesForTab(items, tab, now);
   const upcomingCount = entriesForTab(items, 'upcoming', now).length;
@@ -168,6 +178,7 @@ export default function TripsScreen() {
         </View>
       ) : (
         <FlatList
+          ref={list}
           data={visible}
           keyExtractor={(e) => e.key}
           contentContainerStyle={[

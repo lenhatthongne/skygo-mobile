@@ -4,6 +4,7 @@ import { AppState } from 'react-native';
 
 import { toApiError } from '@/services/api/errors';
 import { errorMessage } from '@/utils/error-messages';
+import { markSupportConversationRead, setActiveSupportView } from '@/services/notification-inbox';
 import { getSupportThread, sendSupportMessage, type SupportImage } from '@/services/api/support';
 
 const POLL_MS = 4000;
@@ -51,9 +52,12 @@ export function useSupportThread(requestId: number) {
       if (busy.current) return;
       busy.current = true;
       try {
+        const first = lastId.current === 0;
         const thread = await getSupportThread(requestId, lastId.current, signal);
         setRequest(thread.request);
         merge(thread.messages);
+        // Opening the conversation reads its replies: the bell stops counting them.
+        if (first || thread.messages.length > 0) markSupportConversationRead(requestId);
         setError(null);
         setOffline(false);
       } catch (e) {
@@ -72,6 +76,8 @@ export function useSupportThread(requestId: number) {
 
   useEffect(() => {
     if (!focused) return;
+    // This conversation is on screen: a reply to it needs no strip at the top.
+    setActiveSupportView(requestId);
     const controller = new AbortController();
     void fetchNew(controller.signal);
     let timer: ReturnType<typeof setInterval> | null = null;
@@ -94,8 +100,9 @@ export function useSupportThread(requestId: number) {
       controller.abort();
       stop();
       sub.remove();
+      setActiveSupportView(null);
     };
-  }, [focused, fetchNew]);
+  }, [focused, fetchNew, requestId]);
 
   const deliver = useCallback(
     async (item: PendingMessage) => {

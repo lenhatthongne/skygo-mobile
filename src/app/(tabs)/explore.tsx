@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { type ComponentRef, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -20,6 +20,11 @@ import { Banner } from '@/components/ui/banner';
 import { Button } from '@/components/ui/button';
 import { BottomTabInset, Radius } from '@/constants/theme';
 import { useRemoteList } from '@/hooks/use-remote-list';
+import {
+  useReloadOnTabReset,
+  useScrollToTopOnTabReset,
+  useTabResetSource,
+} from '@/hooks/use-tab-reset';
 import { useTheme } from '@/hooks/use-theme';
 import { useUserLocation } from '@/hooks/use-user-location';
 import { getAirports } from '@/services/api/catalog';
@@ -43,6 +48,10 @@ export default function ExploreScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { items, loading, error, reload } = useRemoteList(loadAirports);
+  const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
+  useTabResetSource('explore');
+  useScrollToTopOnTabReset(scroll);
+  useReloadOnTabReset(reload);
   const location = useUserLocation();
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
@@ -142,7 +151,10 @@ export default function ExploreScreen() {
             {t('explore.none')}
           </AppText>
         ) : (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.list}>
+          <ScrollView
+            ref={scroll}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.list}>
             {rows.map(({ airport: a, km }) => {
               const open = a.code === selected;
               return (

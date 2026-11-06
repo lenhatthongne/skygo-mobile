@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { useColorScheme } from 'react-native';
 
 import { Colors } from '@/constants/theme';
-import { useUnreadCount } from '@/services/notification-inbox';
 
 /**
  * Bottom tabs. Android: every tab keeps its label (Material's default hides the labels of
@@ -14,7 +13,6 @@ export default function AppTabs() {
   const { t } = useTranslation();
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
-  const unread = useUnreadCount();
 
   return (
     <NativeTabs
@@ -46,9 +44,6 @@ export default function AppTabs() {
           sf={{ default: 'ticket', selected: 'ticket.fill' }}
           md="confirmation_number"
         />
-        {unread > 0 ? (
-          <NativeTabs.Trigger.Badge>{unread > 9 ? '9+' : String(unread)}</NativeTabs.Trigger.Badge>
-        ) : null}
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="explore">

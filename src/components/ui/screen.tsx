@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { useState } from 'react';
+import { type ComponentRef, useRef, useState } from 'react';
 import { Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import {
   KeyboardAwareScrollView,
@@ -9,6 +9,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MaxContentWidth } from '@/constants/theme';
+import { useScrollToTopOnTabReset } from '@/hooks/use-tab-reset';
 import { useTheme } from '@/hooks/use-theme';
 
 import { BookingStepper } from '@/components/booking/booking-stepper';
@@ -41,6 +42,8 @@ export function Screen({
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [footerHeight, setFooterHeight] = useState(0);
+  const scroll = useRef<ComponentRef<typeof KeyboardAwareScrollView>>(null);
+  useScrollToTopOnTabReset(scroll);
   const keyboardVisible = useKeyboardState((state) => state.isVisible);
   const footerPadding = Math.max(insets.bottom, 16);
 
@@ -100,6 +103,7 @@ export function Screen({
           resized for the keyboard and a plain KeyboardAvoidingView would leave fields covered. */}
       <View style={styles.flex}>
         <KeyboardAwareScrollView
+          ref={scroll}
           key={scrollKey}
           style={styles.flex}
           contentContainerStyle={styles.content}
